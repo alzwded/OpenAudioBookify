@@ -29,27 +29,6 @@ import java.io.File
 import java.util.zip.ZipFile
 
 /**
- * Batches sequences of text into chunks that respect the TTS engine's character limit.
- */
-fun Sequence<String>.batchByLength(maxLength: Int): Sequence<String> = sequence {
-    val currentBatch = StringBuilder()
-    for (paragraph in this@batchByLength) {
-        if (currentBatch.length + paragraph.length + 1 > maxLength) {
-            if (currentBatch.isNotEmpty()) {
-                yield(currentBatch.toString())
-                currentBatch.clear()
-            }
-        }
-        if (paragraph.length > maxLength) {
-            paragraph.chunked(maxLength).forEach { yield(it) }
-        } else {
-            currentBatch.append(paragraph).append("\n")
-        }
-    }
-    if (currentBatch.isNotEmpty()) yield(currentBatch.toString())
-}
-
-/**
  * Extracts text from an EPub file lazily by traversing its HTML spine elements.
  */
 fun extractEpubTextLazily(

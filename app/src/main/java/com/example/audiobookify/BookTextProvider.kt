@@ -56,6 +56,28 @@ object BookTextProviderFactory {
     }
 }
 
+/**
+ * Batches sequences of text into chunks that respect the TTS engine's character limit.
+ */
+fun Sequence<String>.batchByLength(maxLength: Int): Sequence<String> = sequence {
+    val currentBatch = StringBuilder()
+    for (paragraph in this@batchByLength) {
+        if (currentBatch.length + paragraph.length + 1 > maxLength) {
+            if (currentBatch.isNotEmpty()) {
+                yield(currentBatch.toString())
+                currentBatch.clear()
+            }
+        }
+        if (currentBatch.isNotEmpty()) {
+            currentBatch.append("\n")
+        }
+        currentBatch.append(paragraph)
+    }
+    if (currentBatch.isNotEmpty()) {
+        yield(currentBatch.toString())
+    }
+}
+
 // --- Implementations ---
 
 /**

@@ -31,12 +31,12 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import android.speech.tts.TextToSpeech
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
-import java.io.File
 import java.util.Locale
 
 class AudiobookService : Service(), TextToSpeech.OnInitListener {
@@ -46,12 +46,13 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
         const val NOTIFICATION_ID = 1
         const val ACTION_START = "ACTION_START"
         const val ACTION_CANCEL = "ACTION_CANCEL"
-        const val EXTRA_EPUB_PATH = "EXTRA_EPUB_PATH"
+        const val EXTRA_BOOK_URI = "EXTRA_BOOK_URI"
+        const val EXTRA_BOOK_NAME = "EXTRA_BOOK_NAME"
     }
 
     private var tts: TextToSpeech? = null
     private var pipeline: AudiobookPipeline? = null
-    private var epubFileToProcess: File? = null
+    private var bookToProcess: Book? = null
 
     // Service-bound Coroutine Scope
     private val serviceJob = Job()
@@ -67,10 +68,14 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
             ACTION_START -> {
                 startForeground(NOTIFICATION_ID, buildNotification("Initializing engine..."))
 
-                val filePath = intent.getStringExtra(EXTRA_EPUB_PATH)
-                if (filePath != null) {
-                    epubFileToProcess = File(filePath)
+                val uriString = intent.getStringExtra(EXTRA_BOOK_URI)
+                val bookName = intent.getStringExtra(EXTRA_BOOK_NAME)
+
+                if (uriString != null && bookName != null) {
+                    bookToProcess = Book(bookName, Uri.parse(uriString))
                     tts = TextToSpeech(this, this)
+                } else {
+                    shutdownService()
                 }
             }
             ACTION_CANCEL -> shutdownService()
@@ -82,18 +87,14 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
         if (status == TextToSpeech.SUCCESS) {
             tts?.language = Locale.US
 
-            epubFileToProcess?.let { file ->
+            bookToProcess?.let { book ->
                 serviceScope.launch(Dispatchers.IO) {
                     try {
-                        val metadata = EpubMetadataParser.parse(file)
-
-                        // Using the new depth-first traversal method!
-                        val lazyChunks = extractEpubTextLazily(
-                            file, metadata.spineList, metadata.manifestMap
-                        ).batchByLength(3900)
+                        // General provider handles extracting text from any supported format
+                        val provider = BookTextProviderFactory.create(this@AudiobookService, book)
 
                         withContext(Dispatchers.Main) {
-                            pipeline = AudiobookPipeline(this@AudiobookService, tts!!, lazyChunks.iterator()) {
+                            pipeline = AudiobookPipeline(this@AudiobookService, tts!!, provider) {
                                 shutdownService()
                             }
                             updateNotification("Generating Audiobook...")
@@ -101,7 +102,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                         }
                     } catch (e: Exception) {
                         withContext(Dispatchers.Main) {
-                            updateNotification("Error: Invalid EPub format.")
+                            updateNotification("Error: Failed to read book format.")
                             shutdownService()
                         }
                     }
@@ -132,7 +133,6 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
     }
 
     private fun buildNotification(statusText: String): Notification {
-        // Change MainActivity::class.java to your actual UI Activity
         val viewIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }

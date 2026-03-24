@@ -1,7 +1,7 @@
 - [x] BookTextProvider interface
 - [x] Refactor out HTML DOM parsing logic from EpubExtractor
-- [ ] move out EpubExtractor.batchByLength into AudiobookPipeline
-- [ ] Refactor AudiobookService/AudiobookPipeline to use BookTextExtractor, like MainActivity.processBooks
+- [x] move out EpubExtractor.batchByLength into AudiobookPipeline
+- [x] Refactor AudiobookService/AudiobookPipeline to use BookTextExtractor, like MainActivity.processBooks
 - [ ] Refactor AudiobookService to accept multiple epubs as input (ArrayList or Array, call the extra field `file_uris` or something like that)
   ```kotlin
    class MainActivity : AppCompatActivity() {

@@ -70,9 +70,10 @@ import java.io.File
 class AudiobookPipeline(
     private val context: Context,
     private val tts: TextToSpeech,
-    private val textChunks: Iterator<String>,
+    private val provider: BookTextProvider,
     private val onPipelineComplete: () -> Unit
 ) {
+    private val textChunks: Iterator<String> = provider.extractText().batchByLength(3900).iterator()
     private var chunkIndex = 0
     @Volatile private var isCancelled = false
 
