@@ -70,7 +70,7 @@
   ```
 - [ ] fix debug render after previous point invariably breaks it
 - [ ] In AudiobookPipeline, make sure chunk files are generated with String.format("%05d", chunkIndex), and that we keep track of them
-- [ ] Rework pipeline and chunkers to generate any number of m4a files and merge them, see "Merge M4A Files with Media3 Transformer" chat; intermediate m4a files should be written to Cache folder
+- [ ] Rework pipeline and chunkers to generate any number of m4a files and merge them, see "Merge M4A Files with Media3 Transformer" chat; intermediate m4a files should be written to Cache folder; rework output path to be an output file (the final m4a file); basically merge everything into one giant stream
 - [ ] Ensure main window keeps track of global "doing something" vs "idle" state. In "doing something", the only action is "Cancel"; in "idle", you can select books, change settings, and hit start
 - [ ] When "doing something", ensure we track which books were processed, which is being processed, which are done
 - [ ] TTS settings?
