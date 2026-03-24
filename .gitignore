@@ -1,5 +1,6 @@
 __*
 worddb.sqlite3
+.kotlin/
 
 # Built artifacts
 bin/
