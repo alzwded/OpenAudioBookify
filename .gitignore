@@ -1,0 +1,50 @@
+__*
+worddb.sqlite3
+
+# Built artifacts
+bin/
+gen/
+out/
+build/
+.gradle/
+
+# Android Studio / IntelliJ files
+.idea/
+*.iml
+*.iws
+*.ipr
+/captures/
+.externalNativeBuild/
+.cxx/
+/cmake-build-*/
+.navigation/
+
+# Gradle
+.gradle/
+build/
+gradle-app.setting
+!gradle-wrapper.jar
+.gradletasknamecache
+
+# Local configuration
+local.properties
+
+# Log files
+*.log
+
+# OS-specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V10
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Backup files
+*.bak
+*.swp
+*~
+
+# Profiler
+*.hprof

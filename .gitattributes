@@ -1,0 +1,6 @@
+# Set default behavior for text files
+* text=auto eol=lf
+
+# Force Windows line endings for specific file types
+*.bat eol=crlf
+*.cmd eol=crlf
