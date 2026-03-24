@@ -289,8 +289,13 @@ class EpubBookTextProvider(
     }
 }
 
-// --- Stubs for Future Implementation ---
+// --- HTML Implementation ---
 
 class HtmlBookTextProvider(private val context: Context, private val book: Book) : BookTextProvider {
-    override fun extractText(): Sequence<String> = sequenceOf("HTML extraction not yet implemented.")
+    override fun extractText(): Sequence<String> = sequence {
+        context.contentResolver.openInputStream(book.uri)?.use { inputStream ->
+            val htmlContent = inputStream.bufferedReader().use { it.readText() }
+            yieldAll(extractHtmlTextLazily(htmlContent))
+        }
+    }
 }

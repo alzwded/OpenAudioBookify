@@ -25,10 +25,6 @@
 
 package com.example.audiobookify
 
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Element
-import org.jsoup.nodes.Node
-import org.jsoup.nodes.TextNode
 import java.io.File
 import java.util.zip.ZipFile
 
@@ -54,7 +50,7 @@ fun Sequence<String>.batchByLength(maxLength: Int): Sequence<String> = sequence 
 }
 
 /**
- * Performs a robust, depth-first DOM traversal of the EPub's HTML.
+ * Extracts text from an EPub file lazily by traversing its HTML spine elements.
  */
 fun extractEpubTextLazily(
     epubFile: File,
@@ -68,49 +64,7 @@ fun extractEpubTextLazily(
 
             if (zipEntry != null) {
                 val htmlContent = zip.getInputStream(zipEntry).bufferedReader().use { it.readText() }
-                val document = Jsoup.parse(htmlContent)
-                val body = document.body() ?: continue
-
-                val currentBlock = StringBuilder()
-
-                suspend fun SequenceScope<String>.yieldCurrentBlock() {
-                    val text = currentBlock.toString().replace(Regex("\\s+"), " ").trim()
-                    if (text.isNotEmpty()) {
-                        yield(text)
-                    }
-                    currentBlock.clear()
-                }
-
-                suspend fun SequenceScope<String>.traverse(node: Node) {
-                    when (node) {
-                        is TextNode -> {
-                            currentBlock.append(node.text())
-                        }
-                        is Element -> {
-                            val isBlock = node.isBlock
-                            if (isBlock) yieldCurrentBlock()
-
-                            val tagName = node.tagName()
-                            if (tagName == "img" || tagName == "image") {
-                                val alt = node.attr("alt").trim()
-                                if (alt.isNotEmpty()) {
-                                    currentBlock.append(" [Image description: $alt] ")
-                                }
-                            } else if (tagName == "br") {
-                                currentBlock.append(" ")
-                            } else {
-                                for (child in node.childNodes()) {
-                                    traverse(child)
-                                }
-                            }
-
-                            if (isBlock) yieldCurrentBlock()
-                        }
-                    }
-                }
-
-                traverse(body)
-                yieldCurrentBlock()
+                yieldAll(extractHtmlTextLazily(htmlContent))
             }
         }
     }
