@@ -101,9 +101,12 @@ fun AudioBookifyApp() {
 
     DisposableEffect(tts) {
         onDispose {
-            if (tts is TextToSpeech) {
-                tts.stop()
-                tts.shutdown()
+            if (isInspectionMode) {
+            } else {
+                if (tts is TextToSpeech) {
+                    tts.stop()
+                    tts.shutdown()
+                }
             }
         }
     }
