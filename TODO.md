@@ -1,8 +1,77 @@
 - [x] BookTextProvider interface
 - [x] Refactor out HTML DOM parsing logic from EpubExtractor
-- [ ] Integrate AudiobookService/AudiobookPipeline in MainActivity.kt
 - [ ] move out EpubExtractor.batchByLength into AudiobookPipeline
-- [ ] Rework pipeline and chunkers to generate any number of m4a files and merge them, see "Merge M4A Files with Media3 Transformer"
-- [ ] Check cancel works
-- [ ] Update main window to show it's "doing" something, and which files have been handled yet, and what their state is (not started, chunking, merging)
+- [ ] Refactor AudiobookService/AudiobookPipeline to use BookTextExtractor, like MainActivity.processBooks
+- [ ] Refactor AudiobookService to accept multiple epubs as input (ArrayList or Array, call the extra field `file_uris` or something like that)
+  ```kotlin
+   class MainActivity : AppCompatActivity() {
+    
+        private val filePickerLauncher = registerForActivityResult(
+            ActivityResultContracts.GetMultipleContents()
+        ) { uris: List<Uri> ->
+            // User selected files - we have permission here
+            startFileProcessingService(uris)
+        }
+        
+        private fun startFileProcessingService(uris: List<Uri>) {
+            val intent = Intent(this, FileProcessingService::class.java).apply {
+                putParcelableArrayListExtra("file_uris", ArrayList(uris))
+                
+                // ✅ CRITICAL: Grant read permission to the service
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                
+                // If service needs to write to the files:
+                // addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            }
+            
+            startService(intent)
+        }
+        
+        fun pickFiles() {
+            filePickerLauncher.launch("*/*")
+        }
+    }
+
+    class FileProcessingService : Service() {
+    
+        override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+            val uris = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent?.getParcelableArrayListExtra("file_uris", Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent?.getParcelableArrayListExtra<Uri>("file_uris")
+            }
+    
+            uris?.forEach { uri ->
+                processFile(uri) // ✅ Can access because permission was granted
+            }
+    
+            stopSelf()
+            return START_NOT_STICKY
+        }
+    
+        private fun processFile(uri: Uri) {
+            try {
+                contentResolver.openInputStream(uri)?.use { inputStream ->
+                    // Read and process the file
+                    val bytes = inputStream.readBytes()
+                    // ... do something with the file
+                }
+            } catch (e: SecurityException) {
+                // This would happen if FLAG_GRANT_READ_URI_PERMISSION wasn't set
+                Log.e("Service", "Permission denied for URI: $uri", e)
+            }
+        }
+    
+        override fun onBind(intent: Intent?): IBinder? = null
+    }
+  ```
+- [ ] Integrate AudiobookService/AudiobookPipeline in MainActivity.kt, replacing existing code in processBooks, eliminating local ttsInstance and tts
+- [ ] fix debug render after previous point invariably breaks it
+- [ ] In AudiobookPipeline, make sure chunk files are generated with String.format("%05d", chunkIndex), and that we keep track of them
+- [ ] Rework pipeline and chunkers to generate any number of m4a files and merge them, see "Merge M4A Files with Media3 Transformer" chat; intermediate m4a files should be written to Cache folder
+- [ ] Ensure main window keeps track of global "doing something" vs "idle" state. In "doing something", the only action is "Cancel"; in "idle", you can select books, change settings, and hit start
+- [ ] When "doing something", ensure we track which books were processed, which is being processed, which are done
 - [ ] TTS settings?
+- [ ] Default output path?
+- [ ] Check cancel works

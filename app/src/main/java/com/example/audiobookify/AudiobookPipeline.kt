@@ -38,6 +38,35 @@ import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
 import java.io.File
 
+// Pipeline setup:
+// 1. Initialize Media3.Transformer, which has a Listener
+// 2. Initialize tts, which has a Listener
+// 3. Trigger first processNextChunk
+//
+// Pipelining:
+// o-> processNextChunk
+//     isCancelled -> End
+//     textChunks
+//         None -> End
+//         Some -> synthesizeToFile -o
+//             o-> onDone
+//                 isCancelled -> End
+//                 transformer.start -o
+//                     o-> onCompleted
+//                         -> isCancelled -> End
+//                         -> processNextChunk -o
+//
+// In other words:
+//    TTS synthesizes text -> WAV file ->
+//    onDone() -> Transformer encodes WAV to m4a ->
+//    onCompleted() -> Delete WAV -> (repeat)
+//
+// Chunk for TTS is determined by Sequence<String>.batchByLength(reasonableChunk)
+// using BookTextExtractor as a starting point
+//
+// In the end, merge all m4a files into consolidated one.
+// Then, perhaps populate metadata?
+
 class AudiobookPipeline(
     private val context: Context,
     private val tts: TextToSpeech,
