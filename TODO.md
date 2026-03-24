@@ -2,7 +2,9 @@
 - [x] Refactor out HTML DOM parsing logic from EpubExtractor
 - [x] move out EpubExtractor.batchByLength into AudiobookPipeline
 - [x] Refactor AudiobookService/AudiobookPipeline to use BookTextExtractor, like MainActivity.processBooks
-- [ ] Refactor AudiobookService to accept multiple epubs as input (ArrayList or Array, call the extra field `file_uris` or something like that)
+- [x] Refactor AudiobookService to accept multiple epubs as input (ArrayList or Array, call the extra field `file_uris` or something like that)
+- [ ] Use ContentResolver to derive mime type in BookTextProvider rather than extension
+- [ ] Integrate AudiobookService/AudiobookPipeline in MainActivity.kt, replacing existing code in processBooks, eliminating local ttsInstance and tts
   ```kotlin
    class MainActivity : AppCompatActivity() {
     
@@ -66,7 +68,6 @@
         override fun onBind(intent: Intent?): IBinder? = null
     }
   ```
-- [ ] Integrate AudiobookService/AudiobookPipeline in MainActivity.kt, replacing existing code in processBooks, eliminating local ttsInstance and tts
 - [ ] fix debug render after previous point invariably breaks it
 - [ ] In AudiobookPipeline, make sure chunk files are generated with String.format("%05d", chunkIndex), and that we keep track of them
 - [ ] Rework pipeline and chunkers to generate any number of m4a files and merge them, see "Merge M4A Files with Media3 Transformer" chat; intermediate m4a files should be written to Cache folder
