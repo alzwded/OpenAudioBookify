@@ -6,10 +6,10 @@
  * modification, are permitted provided that the following conditions are met:
  *
  * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
+ * list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -133,7 +133,7 @@ fun AudioBookifyApp() {
         selectedBooks = selectedBooks,
         outputDirUri = outputDirUri,
         ttsInitialized = ttsInitialized,
-        onAddBooksClick = { filePickerLauncher.launch(arrayOf("text/plain")) },
+        onAddBooksClick = { filePickerLauncher.launch(arrayOf("*/*")) },
         onSetOutputFolderClick = { dirPickerLauncher.launch(null) },
         onStartProcessingClick = {
             if (ttsInitialized && outputDirUri != null && selectedBooks.isNotEmpty()) {
@@ -176,7 +176,7 @@ fun AudioBookifyContent(
                 onClick = onAddBooksClick,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Add .txt Books")
+                Text("Add Books (TXT, EPUB, etc.)")
             }
             
             Spacer(modifier = Modifier.height(8.dp))
@@ -216,28 +216,36 @@ fun AudioBookifyContent(
  */
 fun processBooks(context: Context, tts: Any, books: List<Book>) {
     val ttsInstance = tts as? TextToSpeech ?: return
+    val outputDir = context.getExternalFilesDir(null) ?: return
+
     books.forEach { book ->
-        // TODO this is where we'd call the other code the pro model wrote
-        // TODO have a factory to dispatch to various types of
-        //      files: .txt, .html, .md, .epub, .rst
         try {
-            // TODO accumulate text until '[.]$' or '\n\n'
-            //      or maybe just [.][:white:] or '\n\n'
-            val content = context.contentResolver.openInputStream(book.uri)?.bufferedReader()?.use { it.readText() }
-            if (content != null) {
-                val outputDir = context.getExternalFilesDir(null)
-                val outputFile = File(outputDir, "${book.name.replace("/", "_")}.wav")
-                
-                val result = ttsInstance.synthesizeToFile(content, null, outputFile, book.name)
-                if (result == TextToSpeech.SUCCESS) {
-                    Toast.makeText(context, "Queued: ${book.name}", Toast.LENGTH_SHORT).show()
-                    Log.d("AudioBookify", "Synthesizing to ${outputFile.absolutePath}")
-                } else {
-                    Log.e("AudioBookify", "Failed to queue ${book.name}")
+            val provider = BookTextProviderFactory.create(context, book)
+            
+            var chunkIndex = 0
+            provider.extractText().forEach { chunk ->
+                if (chunk.isNotBlank()) {
+                    // Create sequential file names (e.g. "MyBook_0000.wav")
+                    val safeBookName = book.name.replace("/", "_").substringBeforeLast(".")
+                    val fileName = "${safeBookName}_${String.format("%04d", chunkIndex)}.wav"
+                    val outputFile = File(outputDir, fileName)
+                    
+                    val utteranceId = "${safeBookName}_$chunkIndex"
+                    
+                    val result = ttsInstance.synthesizeToFile(chunk, null, outputFile, utteranceId)
+                    
+                    if (result == TextToSpeech.SUCCESS) {
+                        Log.d("AudioBookify", "Synthesizing to ${outputFile.absolutePath}")
+                    } else {
+                        Log.e("AudioBookify", "Failed to queue $fileName")
+                    }
+                    chunkIndex++
                 }
             }
+            Toast.makeText(context, "Queued: ${book.name} ($chunkIndex chunks)", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Log.e("AudioBookify", "Error processing ${book.name}", e)
+            Toast.makeText(context, "Failed to process ${book.name}", Toast.LENGTH_SHORT).show()
         }
     }
 }
@@ -248,9 +256,9 @@ fun DefaultPreview() {
     MaterialTheme {
         AudioBookifyContent(
             selectedBooks = listOf(
-                Book("The Great Gatsby", Uri.EMPTY),
-                Book("1984", Uri.EMPTY),
-                Book("Pride and Prejudice", Uri.EMPTY)
+                Book("The Great Gatsby.epub", Uri.EMPTY),
+                Book("1984.txt", Uri.EMPTY),
+                Book("Pride and Prejudice.html", Uri.EMPTY)
             ),
             outputDirUri = null,
             ttsInitialized = true,

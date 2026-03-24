@@ -1,0 +1,7 @@
+- [x] BookTextProvider interface
+- [ ] Integrate AudiobookService/AudiobookPipeline in MainActivity.kt
+- [ ] Rework pipeline and chunkers to generate any number of m4a files and merge them, see "Merge M4A Files with Media3 Transformer"
+- [ ] Refactor out HTML DOM parsing logic from EpubExtractor
+- [ ] Check cancel works
+- [ ] Update main window to show it's "doing" something, and which files have been handled yet, and what their state is (not started, chunking, merging)
+- [ ] TTS settings?
