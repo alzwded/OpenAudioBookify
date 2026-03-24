@@ -32,6 +32,7 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
@@ -67,6 +68,7 @@ import java.io.File
 // In the end, merge all m4a files into consolidated one.
 // Then, perhaps populate metadata?
 
+@UnstableApi
 class AudiobookPipeline(
     private val context: Context,
     private val tts: TextToSpeech,
