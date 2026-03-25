@@ -58,6 +58,8 @@ package com.example.audiobookify
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import androidx.documentfile.provider.DocumentFile
@@ -155,7 +157,10 @@ class AudiobookPipeline(
 
             override fun onDone(utteranceId: String?) {
                 if (isCancelled) return
-                encodeWavToM4a(getWavFile(chunkIndex), getTempM4aFile(chunkIndex))
+                // Use a Handler to move the execution to the Main Thread
+                Handler(context.mainLooper).post {
+                    encodeWavToM4a(getWavFile(chunkIndex), getTempM4aFile(chunkIndex))
+                }
             }
 
             override fun onError(utteranceId: String?) {
@@ -213,7 +218,12 @@ class AudiobookPipeline(
             })
             .build()
 
-        mergeTransformer.start(composition, finalTempFile.absolutePath)
+        // Ensure the merge operation also starts on the Main Thread
+        Handler(context.mainLooper).post {
+            if (!isCancelled) {
+                mergeTransformer.start(composition, finalTempFile.absolutePath)
+            }
+        }
     }
 
     private fun writeToSaf(finalTempFile: File) {
