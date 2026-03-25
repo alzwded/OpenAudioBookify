@@ -34,6 +34,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.IBinder
+import android.provider.OpenableColumns
 import android.speech.tts.TextToSpeech
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
@@ -125,8 +126,16 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
             return
         }
 
-        // Derive book name fallback from the URI
-        val bookName = nextUri.lastPathSegment ?: "Unknown_Book"
+        // Fetch actual file name using ContentResolver
+        var bookName = "Unknown_Book"
+        contentResolver.query(nextUri, null, null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (nameIndex != -1) {
+                    bookName = cursor.getString(nameIndex)
+                }
+            }
+        }
         val book = Book(bookName, nextUri)
 
         updateNotification("Generating Audiobook: $bookName...")

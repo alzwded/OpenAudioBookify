@@ -44,13 +44,13 @@ interface BookTextProvider {
  */
 object BookTextProviderFactory {
     fun create(context: Context, book: Book): BookTextProvider {
-        val extension = book.name.substringAfterLast('.', "").lowercase()
+        val mimeType = context.contentResolver.getType(book.uri)
         
-        return when (extension) {
-            "epub" -> EpubBookTextProvider(context, book)
-            "html" -> HtmlBookTextProvider(context, book) // Stub
-            "md" -> MarkdownBookTextProvider(context, book)
-            "txt" -> TxtBookTextProvider(context, book)
+        return when (mimeType) {
+            "application/epub+zip" -> EpubBookTextProvider(context, book)
+            "text/html" -> HtmlBookTextProvider(context, book) // Stub
+            "text/markdown", "text/x-markdown" -> MarkdownBookTextProvider(context, book)
+            "text/plain" -> TxtBookTextProvider(context, book)
             else -> TxtBookTextProvider(context, book) // Fallback to plain text
         }
     }

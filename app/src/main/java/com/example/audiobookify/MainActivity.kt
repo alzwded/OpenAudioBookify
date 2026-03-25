@@ -28,6 +28,7 @@ package com.example.audiobookify
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.widget.Toast
@@ -116,7 +117,16 @@ fun AudioBookifyApp() {
         onResult = { uris ->
             if (uris.isNotEmpty()) {
                 selectedBooks = selectedBooks + uris.map { uri ->
-                    Book(uri.lastPathSegment ?: "Unknown", uri)
+                    var displayName = "Unknown"
+                    context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                            if (nameIndex != -1) {
+                                displayName = cursor.getString(nameIndex)
+                            }
+                        }
+                    }
+                    Book(displayName, uri)
                 }
             }
         }
