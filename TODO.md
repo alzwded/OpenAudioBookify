@@ -10,10 +10,13 @@
 - [x] In AudiobookPipeline, configure AAC settings, i.e. Mono, 48kbps bitrate, etc; there should be per-app settings of these things
 - [ ] ~~Rework pipeline and chunkers to generate any number of m4a files and merge them, see "Merge M4A Files with Media3 Transformer" chat; intermediate m4a files should be written to Cache folder; rework output path to be an output file (the final m4a file); basically merge everything into one giant stream~~ not sure that's useful...
 - [x] add icon
-- [ ] Ensure main window keeps track of global "doing something" vs "idle" state. In "doing something", the only action is "Cancel"; in "idle", you can select books, change settings, and hit start
-- [ ] When "doing something", ensure we track which books were processed, which is being processed, which are done
 - [ ] Configuration screen with persistent settings
   * [ ] TTS settings?
+    + [ ] language/dialect/voice; should read system TTS settings if possible
+    + [ ] speech rate
+    + [ ] speech pitch
   * [ ] AAC settings (mostly bitrate)
+- [ ] Ensure main window keeps track of global "doing something" vs "idle" state. In "doing something", the only action is "Cancel"; in "idle", you can select books, change settings, and hit start
+- [ ] When "doing something", ensure we track which books were processed, which is being processed, which are done
 - [ ] Default output path?
 - [ ] Check cancel works
