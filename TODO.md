@@ -16,6 +16,7 @@
     + [ ] speech rate
     + [ ] speech pitch
   * [ ] AAC settings (mostly bitrate)
+- [ ] check for node.isBlock in html extractor is probably overeager and dubious; should refactor to just accumulate text elements until a punctuation mark or a leaf p h div or something.
 - [ ] Ensure main window keeps track of global "doing something" vs "idle" state. In "doing something", the only action is "Cancel"; in "idle", you can select books, change settings, and hit start
 - [ ] When "doing something", ensure we track which books were processed, which is being processed, which are done
 - [ ] Default output path?
