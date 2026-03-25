@@ -6,10 +6,10 @@
  * modification, are permitted provided that the following conditions are met:
  *
  * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
+ * list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -25,12 +25,13 @@
 
 package com.example.audiobookify
 
-import android.content.Context
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
-import android.speech.tts.TextToSpeech
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -49,18 +50,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import java.io.File
-import java.util.Locale
+import androidx.core.content.ContextCompat
 
 data class Book(val name: String, val uri: Uri)
 
@@ -78,39 +76,29 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AudioBookifyApp() {
     val context = LocalContext.current
-    val isInspectionMode = LocalInspectionMode.current
     var selectedBooks by remember { mutableStateOf<List<Book>>(emptyList()) }
     var outputDirUri by remember { mutableStateOf<Uri?>(null) }
-    var ttsInitialized by remember { mutableStateOf(false) }
     
-    // Use Any? to avoid direct TextToSpeech type reference in the property type,
-    // which helps avoid ClassNotFoundException during Compose Preview reflection.
-    val tts = remember(isInspectionMode) {
-        if (isInspectionMode) {
-            null
-        } else {
-            var instance: TextToSpeech? = null
-            instance = TextToSpeech(context) { status ->
-                if (status == TextToSpeech.SUCCESS) {
-                    instance?.language = Locale.US
-                    ttsInitialized = true
-                }
+    // Check notification permission for Android 13+ (Required for Foreground Services)
+    var hasNotificationPermission by remember {
+        mutableStateOf(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+            } else {
+                true
             }
-            instance
-        }
+        )
     }
 
-    DisposableEffect(tts) {
-        onDispose {
-            if (isInspectionMode) {
-            } else {
-                if (tts is TextToSpeech) {
-                    tts.stop()
-                    tts.shutdown()
-                }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            hasNotificationPermission = isGranted
+            if (!isGranted) {
+                Toast.makeText(context, "Notification permission required for background processing", Toast.LENGTH_SHORT).show()
             }
         }
-    }
+    )
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments(),
@@ -136,21 +124,39 @@ fun AudioBookifyApp() {
         contract = ActivityResultContracts.OpenDocumentTree(),
         onResult = { uri ->
             outputDirUri = uri
+            // Persist read/write permissions for the selected directory across restarts
+            uri?.let {
+                val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                context.contentResolver.takePersistableUriPermission(it, takeFlags)
+            }
         }
     )
+
+    val startProcessingService = {
+        val intent = Intent(context, AudiobookService::class.java).apply {
+            action = AudiobookService.ACTION_START
+            putParcelableArrayListExtra(AudiobookService.EXTRA_BOOK_URIS, ArrayList(selectedBooks.map { it.uri }))
+            putExtra("EXTRA_OUTPUT_URI", outputDirUri)
+        }
+        
+        ContextCompat.startForegroundService(context, intent)
+        Toast.makeText(context, "Processing started in background", Toast.LENGTH_SHORT).show()
+    }
 
     AudioBookifyContent(
         selectedBooks = selectedBooks,
         outputDirUri = outputDirUri,
-        ttsInitialized = ttsInitialized,
         onAddBooksClick = { filePickerLauncher.launch(arrayOf("*/*")) },
         onSetOutputFolderClick = { dirPickerLauncher.launch(null) },
         onStartProcessingClick = {
-            if (ttsInitialized && outputDirUri != null && selectedBooks.isNotEmpty()) {
-                tts?.let { processBooks(context, it, selectedBooks) }
+            if (outputDirUri != null && selectedBooks.isNotEmpty()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission) {
+                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    startProcessingService()
+                }
             } else {
                 val message = when {
-                    !ttsInitialized -> "TTS not ready"
                     outputDirUri == null -> "Select output folder"
                     selectedBooks.isEmpty() -> "Add some books"
                     else -> "Unknown error"
@@ -165,7 +171,6 @@ fun AudioBookifyApp() {
 fun AudioBookifyContent(
     selectedBooks: List<Book>,
     outputDirUri: Uri?,
-    ttsInitialized: Boolean,
     onAddBooksClick: () -> Unit,
     onSetOutputFolderClick: () -> Unit,
     onStartProcessingClick: () -> Unit
@@ -210,52 +215,10 @@ fun AudioBookifyContent(
             
             Button(
                 onClick = onStartProcessingClick,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = ttsInitialized
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Start Processing")
             }
-        }
-    }
-}
-
-/**
- * Processes books. The [tts] parameter is typed as [Any] to avoid [TextToSpeech] 
- * appearing in the function signature, which prevents [ClassNotFoundException] 
- * during Compose Preview's reflection-based method scanning.
- */
-fun processBooks(context: Context, tts: Any, books: List<Book>) {
-    val ttsInstance = tts as? TextToSpeech ?: return
-    val outputDir = context.getExternalFilesDir(null) ?: return
-
-    books.forEach { book ->
-        try {
-            val provider = BookTextProviderFactory.create(context, book)
-            
-            var chunkIndex = 0
-            provider.extractText().forEach { chunk ->
-                if (chunk.isNotBlank()) {
-                    // Create sequential file names (e.g. "MyBook_0000.wav")
-                    val safeBookName = book.name.replace("/", "_").substringBeforeLast(".")
-                    val fileName = "${safeBookName}_${String.format("%04d", chunkIndex)}.wav"
-                    val outputFile = File(outputDir, fileName)
-                    
-                    val utteranceId = "${safeBookName}_$chunkIndex"
-                    
-                    val result = ttsInstance.synthesizeToFile(chunk, null, outputFile, utteranceId)
-                    
-                    if (result == TextToSpeech.SUCCESS) {
-                        Log.d("AudioBookify", "Synthesizing to ${outputFile.absolutePath}")
-                    } else {
-                        Log.e("AudioBookify", "Failed to queue $fileName")
-                    }
-                    chunkIndex++
-                }
-            }
-            Toast.makeText(context, "Queued: ${book.name} ($chunkIndex chunks)", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Log.e("AudioBookify", "Error processing ${book.name}", e)
-            Toast.makeText(context, "Failed to process ${book.name}", Toast.LENGTH_SHORT).show()
         }
     }
 }
@@ -271,7 +234,6 @@ fun DefaultPreview() {
                 Book("Pride and Prejudice.html", Uri.EMPTY)
             ),
             outputDirUri = null,
-            ttsInitialized = true,
             onAddBooksClick = {},
             onSetOutputFolderClick = {},
             onStartProcessingClick = {}

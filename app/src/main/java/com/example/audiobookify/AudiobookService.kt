@@ -47,11 +47,12 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
         const val NOTIFICATION_ID = 1
         const val ACTION_START = "ACTION_START"
         const val ACTION_CANCEL = "ACTION_CANCEL"
-        const val EXTRA_BOOK_URIS = "EXTRA_BOOK_URIS" // Replaced URI and NAME with an ArrayList of URIs
+        const val EXTRA_BOOK_URIS = "EXTRA_BOOK_URIS" 
     }
 
     private var tts: TextToSpeech? = null
     private var pipeline: AudiobookPipeline? = null
+    private var outputDirUri: Uri? = null
     
     // A queue to hold the pending URIs to process sequentially
     private val bookQueue = ArrayDeque<Uri>()
@@ -70,6 +71,18 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
             ACTION_START -> {
                 startForeground(NOTIFICATION_ID, buildNotification("Initializing engine..."))
 
+                // Extract output directory
+                val outUri: Uri? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra("EXTRA_OUTPUT_URI", Uri::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra("EXTRA_OUTPUT_URI")
+                }
+                
+                if (outUri != null) {
+                    outputDirUri = outUri
+                }
+
                 // Retrieve the ArrayList of URIs depending on the Android version
                 val uris: ArrayList<Uri>? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     intent.getParcelableArrayListExtra(EXTRA_BOOK_URIS, Uri::class.java)
@@ -82,19 +95,14 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                     bookQueue.addAll(uris)
                     
                     if (tts == null) {
-                        // Initialize TTS. This will trigger onInit() asynchronously.
                         tts = TextToSpeech(this, this)
                     } else if (pipeline == null) {
-                        // If TTS is already running and pipeline is idle, start processing newly queued items
                         processNextBook()
                     } else {
-                        // If pipeline is running, update the notification to reflect the newly appended queue size
                         updateNotification("Queued additional books. Total pending: ${bookQueue.size}")
                     }
                 } else if (bookQueue.isEmpty() && pipeline == null) {
-                    // Nothing to process, nothing currently BEING processed, safety fallback
                     shutdownService()
-                    // if pipeline != null, then it will eventually finish and cause shutdownService
                 }
             }
             ACTION_CANCEL -> shutdownService()
@@ -112,21 +120,15 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
         }
     }
 
-    /**
-     * Pops the next URI from the queue and starts processing. 
-     * If the queue is empty, shuts down the service.
-     */
     private fun processNextBook() {
         val nextUri = bookQueue.removeFirstOrNull()
         
         if (nextUri == null) {
-            // Queue exhausted
             updateNotification("All audiobooks generated successfully.")
             shutdownService()
             return
         }
 
-        // Fetch actual file name using ContentResolver
         var bookName = "Unknown_Book"
         contentResolver.query(nextUri, null, null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) {
@@ -136,18 +138,26 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                 }
             }
         }
-        val book = Book(bookName, nextUri)
+        
+        // Strip out the extension for cleaner file names later
+        val cleanBookName = bookName.substringBeforeLast(".")
+        val book = Book(cleanBookName, nextUri)
 
-        updateNotification("Generating Audiobook: $bookName...")
+        updateNotification("Generating Audiobook: $cleanBookName...")
 
         serviceScope.launch(Dispatchers.IO) {
             try {
-                // General provider handles extracting text from any supported format
                 val provider = BookTextProviderFactory.create(this@AudiobookService, book)
 
                 withContext(Dispatchers.Main) {
-                    pipeline = AudiobookPipeline(this@AudiobookService, tts!!, provider) {
-                        // On completion of this pipeline, clear reference and process the next book
+                    // Pass the bookname and the destination URI to the pipeline
+                    pipeline = AudiobookPipeline(
+                        context = this@AudiobookService,
+                        tts = tts!!,
+                        provider = provider,
+                        bookName = book.name,
+                        outputDirUri = outputDirUri
+                    ) {
                         pipeline = null
                         processNextBook()
                     }
@@ -155,8 +165,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    updateNotification("Error reading format for: $bookName")
-                    // If one book fails, skip to the next instead of stopping the whole service
+                    updateNotification("Error reading format for: $cleanBookName")
                     pipeline = null
                     processNextBook()
                 }
