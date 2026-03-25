@@ -59,7 +59,6 @@ import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
-import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import androidx.documentfile.provider.DocumentFile
@@ -67,11 +66,13 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.transformer.Composition
+import androidx.media3.transformer.DefaultEncoderFactory
 import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.EditedMediaItemSequence
 import androidx.media3.transformer.Transformer
+import androidx.media3.transformer.Codec
 import java.io.File
 
 @UnstableApi
@@ -90,14 +91,45 @@ class AudiobookPipeline(
     // Keep track of our encoded intermediate m4a chunks
     private val encodedChunkFiles = mutableListOf<File>()
 
+    /**
+     * Creates a Transformer configured for Mono, 48kbps AAC.
+     */
+    private fun createAudioTransformer(listener: Transformer.Listener): Transformer {
+        val defaultEncoderFactory = DefaultEncoderFactory.Builder(context).build()
+        
+        val customEncoderFactory = object : Codec.EncoderFactory {
+            override fun createForAudioEncoding(
+                format: androidx.media3.common.Format,
+                logSessionId: android.media.metrics.LogSessionId?
+            ): Codec {
+                val customFormat = format.buildUpon()
+                    .setChannelCount(1)
+                    .setAverageBitrate(48000)
+                    .build()
+                return defaultEncoderFactory.createForAudioEncoding(customFormat, logSessionId)
+            }
+
+            override fun createForVideoEncoding(
+                format: androidx.media3.common.Format,
+                logSessionId: android.media.metrics.LogSessionId?
+            ): Codec {
+                return defaultEncoderFactory.createForVideoEncoding(format, logSessionId)
+            }
+        }
+
+        return Transformer.Builder(context)
+            .setAudioMimeType(MimeTypes.AUDIO_AAC)
+            .setEncoderFactory(customEncoderFactory)
+            .addListener(listener)
+            .build()
+    }
+
     // Transformer for encoding WAV -> M4A
-    private val chunkTransformer: Transformer = Transformer.Builder(context)
-        .setAudioMimeType(MimeTypes.AUDIO_AAC)
-        .addListener(object : Transformer.Listener {
+    private val chunkTransformer: Transformer by lazy {
+        createAudioTransformer(object : Transformer.Listener {
             override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                 if (isCancelled) return
 
-                // Clean up the WAV file immediately to save cache space
                 val wavFile = getWavFile(chunkIndex)
                 if (wavFile.exists()) wavFile.delete()
 
@@ -120,7 +152,7 @@ class AudiobookPipeline(
                 onPipelineComplete()
             }
         })
-        .build()
+    }
 
     fun start() {
         setupTtsListener()
@@ -138,7 +170,6 @@ class AudiobookPipeline(
         if (isCancelled) return
 
         if (!textChunks.hasNext()) {
-            // All chunks generated, time to merge them into one file!
             mergeChunksAndExport()
             return
         }
@@ -157,12 +188,12 @@ class AudiobookPipeline(
 
             override fun onDone(utteranceId: String?) {
                 if (isCancelled) return
-                // Use a Handler to move the execution to the Main Thread
                 Handler(context.mainLooper).post {
                     encodeWavToM4a(getWavFile(chunkIndex), getTempM4aFile(chunkIndex))
                 }
             }
 
+            @Deprecated("Deprecated in Java")
             override fun onError(utteranceId: String?) {
                 println("TTS Error on chunk $chunkIndex")
             }
@@ -184,41 +215,35 @@ class AudiobookPipeline(
             return
         }
 
-        // Map all chunk files to EditedMediaItems for concatenation
         val editedMediaItems = encodedChunkFiles.map { file ->
             val mediaItem = MediaItem.fromUri(Uri.fromFile(file))
             EditedMediaItem.Builder(mediaItem).build()
         }
 
-        // Create an EditedMediaItemSequence and Composition to tell Transformer to stitch them in order
         val sequence = EditedMediaItemSequence.withAudioFrom(editedMediaItems)
         val composition = Composition.Builder(sequence).build()
 
         val finalTempFile = File(context.cacheDir, "final_merged_audiobook.m4a")
         if (finalTempFile.exists()) finalTempFile.delete()
 
-        val mergeTransformer = Transformer.Builder(context)
-            .setAudioMimeType(MimeTypes.AUDIO_AAC)
-            .addListener(object : Transformer.Listener {
-                override fun onCompleted(composition: Composition, exportResult: ExportResult) {
-                    if (!isCancelled) writeToSaf(finalTempFile)
-                    cleanup(finalTempFile)
-                    onPipelineComplete()
-                }
+        val mergeTransformer = createAudioTransformer(object : Transformer.Listener {
+            override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                if (!isCancelled) writeToSaf(finalTempFile)
+                cleanup(finalTempFile)
+                onPipelineComplete()
+            }
 
-                override fun onError(
-                    composition: Composition,
-                    exportResult: ExportResult,
-                    exportException: ExportException
-                ) {
-                    println("Error merging final audiobook: ${exportException.message}")
-                    cleanup(finalTempFile)
-                    onPipelineComplete()
-                }
-            })
-            .build()
+            override fun onError(
+                composition: Composition,
+                exportResult: ExportResult,
+                exportException: ExportException
+            ) {
+                println("Error merging final audiobook: ${exportException.message}")
+                cleanup(finalTempFile)
+                onPipelineComplete()
+            }
+        })
 
-        // Ensure the merge operation also starts on the Main Thread
         Handler(context.mainLooper).post {
             if (!isCancelled) {
                 mergeTransformer.start(composition, finalTempFile.absolutePath)
@@ -230,7 +255,7 @@ class AudiobookPipeline(
         try {
             val tree = DocumentFile.fromTreeUri(context, outputDirUri!!)
             val safeName = bookName.replace(Regex("[\\\\/:*?\"<>|]"), "_")
-            val fileName = "$safeName.m4a" // Single file!
+            val fileName = "$safeName.m4a"
 
             val docFile = tree?.createFile("audio/mp4", fileName)
             docFile?.uri?.let { destUri ->
@@ -246,20 +271,17 @@ class AudiobookPipeline(
     }
 
     private fun cleanup(finalTempFile: File? = null) {
-        // Clear current working chunk
         val wavFile = getWavFile(chunkIndex)
         if (wavFile.exists()) wavFile.delete()
 
         val tempM4a = getTempM4aFile(chunkIndex)
         if (tempM4a.exists()) tempM4a.delete()
 
-        // Clear all intermediate chunks
         encodedChunkFiles.forEach { file ->
             if (file.exists()) file.delete()
         }
         encodedChunkFiles.clear()
 
-        // Clear the final merged temp file if provided
         if (finalTempFile?.exists() == true) {
             finalTempFile.delete()
         }

@@ -45,6 +45,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
     companion object {
         const val CHANNEL_ID = "AudiobookGenerationChannel"
         const val NOTIFICATION_ID = 1
+        const val COMPLETED_NOTIFICATION_ID = 2
         const val ACTION_START = "ACTION_START"
         const val ACTION_CANCEL = "ACTION_CANCEL"
         const val EXTRA_BOOK_URIS = "EXTRA_BOOK_URIS" 
@@ -124,7 +125,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
         val nextUri = bookQueue.removeFirstOrNull()
         
         if (nextUri == null) {
-            updateNotification("All audiobooks generated successfully.")
+            showCompletionNotification()
             shutdownService()
             return
         }
@@ -192,6 +193,18 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
     private fun updateNotification(text: String) {
         val manager = getSystemService(NotificationManager::class.java)
         manager?.notify(NOTIFICATION_ID, buildNotification(text))
+    }
+
+    private fun showCompletionNotification() {
+        val manager = getSystemService(NotificationManager::class.java)
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Audiobook Generator")
+            .setContentText("All audiobooks generated successfully.")
+            .setSmallIcon(android.R.drawable.ic_media_play)
+            .setAutoCancel(true)
+            .setOngoing(false)
+            .build()
+        manager?.notify(COMPLETED_NOTIFICATION_ID, notification)
     }
 
     private fun buildNotification(statusText: String): Notification {
