@@ -26,8 +26,11 @@
 package com.example.audiobookify
 
 import android.content.Context
+import android.util.Log
 import java.io.File
 import java.io.InputStreamReader
+
+private const val TAG = "BOOK_TEXT_PROVIDER"
 
 /**
  * Interface for extracting text sequentially from a book source.
@@ -45,6 +48,8 @@ interface BookTextProvider {
 object BookTextProviderFactory {
     fun create(context: Context, book: Book): BookTextProvider {
         val mimeType = context.contentResolver.getType(book.uri)
+
+        Log.i(TAG, "Creating provider for book ${book.name}, resolved mimeType $mimeType")
         
         return when (mimeType) {
             "application/epub+zip" -> EpubBookTextProvider(context, book)
@@ -64,6 +69,7 @@ fun Sequence<String>.batchByLength(maxLength: Int): Sequence<String> = sequence 
     for (paragraph in this@batchByLength) {
         if (currentBatch.length + paragraph.length + 1 > maxLength) {
             if (currentBatch.isNotEmpty()) {
+                Log.d(TAG, "Yielding a paragraph of length ${currentBatch.length}")
                 yield(currentBatch.toString())
                 currentBatch.clear()
             }
@@ -71,9 +77,21 @@ fun Sequence<String>.batchByLength(maxLength: Int): Sequence<String> = sequence 
         if (currentBatch.isNotEmpty()) {
             currentBatch.append("\n")
         }
-        currentBatch.append(paragraph)
+        if (paragraph.length + 1 < maxLength) {
+            currentBatch.append(paragraph)
+        } else {
+            Log.d(TAG, "Paragraph was ${paragraph.length} long, splitting in $maxLength - 1 chunks")
+            paragraph.chunked(maxLength - 1).mapIndexed { index, chunk ->
+                if ((index == paragraph.length / (maxLength - 1)) && chunk.length < maxLength - 1) {
+                    currentBatch.append(chunk)
+                } else {
+                    yield(chunk)
+                }
+            }
+        }
     }
     if (currentBatch.isNotEmpty()) {
+        Log.d(TAG, "Yielding a paragraph of length ${currentBatch.length}")
         yield(currentBatch.toString())
     }
 }

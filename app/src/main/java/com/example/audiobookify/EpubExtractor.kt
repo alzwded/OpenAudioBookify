@@ -25,8 +25,11 @@
 
 package com.example.audiobookify
 
+import android.util.Log
 import java.io.File
 import java.util.zip.ZipFile
+
+private const val TAG = "EPUB_EXTRACTOR"
 
 /**
  * Extracts text from an EPub file lazily, ensuring sentences remain coherent
@@ -40,11 +43,14 @@ fun extractEpubTextLazily(
     // 1. Create a raw stream of all ballparked chunks from all spine items
     val ballparkStream = sequence {
         ZipFile(epubFile).use { zip ->
+            Log.i(TAG, "Starting EPUB")
             for (id in spineList) {
+                Log.i(TAG, "Next spine entry")
                 val filePath = manifestMap[id] ?: continue
                 val zipEntry = zip.getEntry(filePath)
 
                 if (zipEntry != null) {
+                    Log.i(TAG, "Next zip entry")
                     val htmlContent = zip.getInputStream(zipEntry).bufferedReader().use { it.readText() }
                     // Yield raw ballpark chunks to the aggregate stream
                     yieldAll(ballparkHtmlChunks(htmlContent))

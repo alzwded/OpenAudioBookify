@@ -36,9 +36,12 @@ import android.os.Build
 import android.os.IBinder
 import android.provider.OpenableColumns
 import android.speech.tts.TextToSpeech
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
 import java.util.Locale
+
+private const val TAG = "AUDIOBOOK_SERVICE"
 
 class AudiobookService : Service(), TextToSpeech.OnInitListener {
 
@@ -63,6 +66,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
     private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
 
     override fun onCreate() {
+        Log.i(TAG, "Creating service")
         super.onCreate()
         createNotificationChannel()
     }
@@ -70,6 +74,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
+                Log.i(TAG, "Starting")
                 startForeground(NOTIFICATION_ID, buildNotification("Initializing engine..."))
 
                 // Extract output directory
@@ -98,11 +103,14 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                     if (tts == null) {
                         tts = TextToSpeech(this, this)
                     } else if (pipeline == null) {
+                        Log.i(TAG, "Pipeline does not exist, starting")
                         processNextBook()
                     } else {
+                        Log.i(TAG, "Pipeline exists, enqueuing")
                         updateNotification("Queued additional books. Total pending: ${bookQueue.size}")
                     }
                 } else if (bookQueue.isEmpty() && pipeline == null) {
+                    Log.w(TAG, "Nothing to do, shuting down")
                     shutdownService()
                 }
             }
@@ -112,6 +120,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
     }
 
     override fun onInit(status: Int) {
+        Log.i(TAG, "onInit $status")
         if (status == TextToSpeech.SUCCESS) {
             tts?.language = Locale.US
             processNextBook()
@@ -125,10 +134,13 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
         val nextUri = bookQueue.removeFirstOrNull()
         
         if (nextUri == null) {
+            Log.i(TAG, "No more books in queue, shutting down")
             showCompletionNotification()
             shutdownService()
             return
         }
+
+        Log.i(TAG, "Next book")
 
         var bookName = "Unknown_Book"
         contentResolver.query(nextUri, null, null, null, null)?.use { cursor ->
@@ -159,12 +171,14 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                         bookName = book.name,
                         outputDirUri = outputDirUri
                     ) {
+                        // TODO this isn't a race condition with enqueuing new books, is it?
                         pipeline = null
                         processNextBook()
                     }
                     pipeline?.start()
                 }
             } catch (e: Exception) {
+                Log.e(TAG, "Failed to start pipeline, ${e.message}")
                 withContext(Dispatchers.Main) {
                     updateNotification("Error reading format for: $cleanBookName")
                     pipeline = null
@@ -175,6 +189,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
     }
 
     private fun shutdownService() {
+        Log.i(TAG, "Shutting down")
         bookQueue.clear()
         pipeline?.cancel()
         pipeline = null
@@ -186,6 +201,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
     }
 
     override fun onDestroy() {
+        Log.i(TAG, "Destroying")
         super.onDestroy()
         serviceJob.cancel()
     }

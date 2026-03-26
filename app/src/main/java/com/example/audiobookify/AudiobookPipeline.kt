@@ -61,6 +61,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
@@ -74,6 +75,8 @@ import androidx.media3.transformer.EditedMediaItemSequence
 import androidx.media3.transformer.Transformer
 import androidx.media3.transformer.Codec
 import java.io.File
+
+private const val TAG = "AUDIOBOOK_PIPELINE"
 
 @UnstableApi
 class AudiobookPipeline(
@@ -128,6 +131,7 @@ class AudiobookPipeline(
     private val chunkTransformer: Transformer by lazy {
         createAudioTransformer(object : Transformer.Listener {
             override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                Log.i(TAG, "Completed $chunkIndex")
                 if (isCancelled) return
 
                 val wavFile = getWavFile(chunkIndex)
@@ -147,7 +151,7 @@ class AudiobookPipeline(
                 exportResult: ExportResult,
                 exportException: ExportException
             ) {
-                println("Chunk MediaCodec Error on chunk $chunkIndex: ${exportException.message}")
+                Log.e(TAG, "Chunk MediaCodec Error on chunk $chunkIndex: ${exportException.message}")
                 cleanup()
                 onPipelineComplete()
             }
@@ -155,11 +159,13 @@ class AudiobookPipeline(
     }
 
     fun start() {
+        Log.i(TAG, "Starting pipeline")
         setupTtsListener()
         processNextChunk()
     }
 
     fun cancel() {
+        Log.i(TAG, "Canceling pipeline")
         isCancelled = true
         tts.stop()
         chunkTransformer.cancel()
@@ -170,9 +176,12 @@ class AudiobookPipeline(
         if (isCancelled) return
 
         if (!textChunks.hasNext()) {
+            Log.i(TAG, "No more chunks")
             mergeChunksAndExport()
             return
         }
+
+        Log.i(TAG, "Processing next chunk $chunkIndex")
 
         val text = textChunks.next()
         val wavFile = getWavFile(chunkIndex)
@@ -184,24 +193,28 @@ class AudiobookPipeline(
 
     private fun setupTtsListener() {
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String?) {}
+            override fun onStart(utteranceId: String?) {
+                Log.i(TAG, "Starting TTS utterance for $utteranceId")
+            }
 
             override fun onDone(utteranceId: String?) {
+                Log.i(TAG, "Finished TTS utterance for $utteranceId")
                 if (isCancelled) return
                 Handler(context.mainLooper).post {
                     encodeWavToM4a(getWavFile(chunkIndex), getTempM4aFile(chunkIndex))
                 }
             }
 
-            @Deprecated("Deprecated in Java")
-            override fun onError(utteranceId: String?) {
-                println("TTS Error on chunk $chunkIndex")
+            override fun onError(utteranceId: String?, errorCode: int) {
+                Log.e(TAG, "TTS Error on chunk $chunkIndex: $errorCode")
             }
         })
     }
 
     private fun encodeWavToM4a(wavFile: File, m4aFile: File) {
         if (isCancelled) return
+
+        Log.i(TAG, "Encoding wav to m4a")
         if (m4aFile.exists()) m4aFile.delete()
 
         val mediaItem = MediaItem.fromUri(Uri.fromFile(wavFile))
@@ -210,10 +223,13 @@ class AudiobookPipeline(
 
     private fun mergeChunksAndExport() {
         if (encodedChunkFiles.isEmpty() || outputDirUri == null) {
+            Log.w(TAG, "mergeChunksAndExport: nothing to do")
             cleanup()
             onPipelineComplete()
             return
         }
+
+        Log.i(TAG, "Merging all chunks")
 
         val editedMediaItems = encodedChunkFiles.map { file ->
             val mediaItem = MediaItem.fromUri(Uri.fromFile(file))
@@ -228,6 +244,7 @@ class AudiobookPipeline(
 
         val mergeTransformer = createAudioTransformer(object : Transformer.Listener {
             override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                Log.i(TAG, "Final m4a completed")
                 if (!isCancelled) writeToSaf(finalTempFile)
                 cleanup(finalTempFile)
                 onPipelineComplete()
@@ -238,7 +255,7 @@ class AudiobookPipeline(
                 exportResult: ExportResult,
                 exportException: ExportException
             ) {
-                println("Error merging final audiobook: ${exportException.message}")
+                Log.e(TAG, "Error merging final audiobook: ${exportException.message}")
                 cleanup(finalTempFile)
                 onPipelineComplete()
             }
@@ -252,6 +269,7 @@ class AudiobookPipeline(
     }
 
     private fun writeToSaf(finalTempFile: File) {
+        Log.i(TAG, "Exporting to SAF")
         try {
             val tree = DocumentFile.fromTreeUri(context, outputDirUri!!)
             val safeName = bookName.replace(Regex("[\\\\/:*?\"<>|]"), "_")
@@ -266,11 +284,12 @@ class AudiobookPipeline(
                 }
             }
         } catch (e: Exception) {
-            println("SAF Write Error during final export: ${e.message}")
+            Log.e(TAG, "SAF Write Error during final export: ${e.message}")
         }
     }
 
     private fun cleanup(finalTempFile: File? = null) {
+        Log.i(TAG, "cleanup")
         val wavFile = getWavFile(chunkIndex)
         if (wavFile.exists()) wavFile.delete()
 
