@@ -31,51 +31,107 @@ import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
 
 /**
- * Performs a robust, depth-first DOM traversal of an HTML document to extract text.
- * Yields clean text blocks lazily.
+ * Extracts text from an HTML document lazily using a generator-consumer pattern.
  */
 fun extractHtmlTextLazily(htmlContent: String): Sequence<String> = sequence {
     val document = Jsoup.parse(htmlContent)
     val body = document.body() ?: return@sequence
 
-    val currentBlock = StringBuilder()
-
-    suspend fun SequenceScope<String>.yieldCurrentBlock() {
-        val text = currentBlock.toString().replace(Regex("\\s+"), " ").trim()
-        if (text.isNotEmpty()) {
-            yield(text)
-        }
-        currentBlock.clear()
-    }
-
-    suspend fun SequenceScope<String>.traverse(node: Node) {
-        when (node) {
-            is TextNode -> {
-                currentBlock.append(node.text())
-            }
-            is Element -> {
-                val isBlock = node.isBlock
-                if (isBlock) yieldCurrentBlock()
-
-                val tagName = node.tagName()
-                if (tagName == "img" || tagName == "image") {
-                    val alt = node.attr("alt").trim()
-                    if (alt.isNotEmpty()) {
-                        currentBlock.append(" [Image description: $alt] ")
-                    }
-                } else if (tagName == "br") {
-                    currentBlock.append(" ")
-                } else {
-                    for (child in node.childNodes()) {
-                        traverse(child)
-                    }
+    // 1. The intermediate generator: ballparks chunks directly from DOM rules
+    val traverseGenerator = sequence {
+        suspend fun SequenceScope<String>.traverse(node: Node) {
+            when (node) {
+                // free floating text
+                is TextNode -> {
+                    val text = node.text()
+                    if (text.isNotBlank()) yield(text)
                 }
+                // structure elements
+                is Element -> {
+                    val tag = node.tagName().lowercase()
+                    
+                    when {
+                        // breaks break
+                        tag == "br" -> {
+                            yield("\n")
+                        }
+                        // for pre, preserve formatting, as it might be important
+                        tag == "pre" -> {
+                            yield(node.wholeText() + "\n\n")
+                        }
+                        // extract alt or title from img
+                        tag == "img" || tag == "image" -> {
+                            val alt = node.attr("alt").trim()
+                            val title = node.attr("title").trim()
+                            if (alt.isNotEmpty()) {
+                                yield(" [Image description: $alt] ")
+                            } else if (title.isNotEmpty()) {
+                                yield(" [Image title: $title] ")
+                            } else {
+                                yield(" [Image, no description available] ")
+                            }
+                        }
+                        // just grab flattened text from headings and drop a double
+                        // line feed, as they probably don't have punctuation
+                        tag.matches(Regex("h[1-6]")) -> {
+                            yield(node.text() + "\n\n")
+                        }
+                        // everything else:
+                        else -> {
+                            // recurse into both TextNode's and Elements, in order
+                            for (child in node.childNodes()) {
+                                traverse(child)
+                            }
 
-                if (isBlock) yieldCurrentBlock()
+                            // when done, check what we were, and issue some relevant whitespace
+                            when (tag) {
+                                "table", "ol", "ul", "dl", "dd", "dt", "li", "tr", "thead" -> yield("\n\n")
+                                "p" -> yield("\n")
+                                "td", "th" -> yield(" ")
+                                else -> if (node.isBlock) yield(" ")
+                            }
+                        } // else
+                    } // when tag == ...
+                } // is Element
+            } // when(node)
+        } // traverse(node)
+        
+        traverse(body)
+    } // traverseGenerator
+
+    // 2. The consumer: buffers the generated chunks and yields proper sentences
+    val buffer = StringBuilder()
+    val boundaryRegex = Regex("([.?!][ \\t\\n]|\\n\\n)")
+
+    for (chunk in traverseGenerator) {
+        buffer.append(chunk)
+
+        var match = boundaryRegex.find(buffer)
+        while (match != null) {
+            // If the boundary is a double line feed, split exactly before it.
+            // If it's punctuation, include the punctuation in the yielded chunk.
+            val splitIndex = if (match.value == "\n\n") {
+                match.range.first
+            } else {
+                match.range.first + 1
             }
+
+            val chunkToYield = buffer.substring(0, splitIndex).trim()
+            if (chunkToYield.isNotEmpty()) {
+                yield(chunkToYield)
+            }
+
+            // Move the buffer forward past the matched boundary 
+            buffer.delete(0, match.range.last + 1)
+            
+            // Look for the next boundary in the remaining buffer
+            match = boundaryRegex.find(buffer)
         }
     }
 
-    traverse(body)
-    yieldCurrentBlock()
+    // 3. Fallback: yield any remaining text in the buffer once the generator is empty
+    val finalChunk = buffer.trim()
+    if (finalChunk.isNotEmpty()) {
+        yield(finalChunk)
+    }
 }
