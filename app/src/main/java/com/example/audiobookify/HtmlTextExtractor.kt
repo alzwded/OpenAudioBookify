@@ -31,79 +31,88 @@ import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
 
 /**
+ * High-level entry point for single HTML files.
+ */
+fun extractHtmlTextLazily(htmlContent: String): Sequence<String> =
+    ballparkHtmlChunks(htmlContent).chunkByPunctuation()
+
+/**
  * Extracts text from an HTML document lazily using a generator-consumer pattern.
  */
-fun extractHtmlTextLazily(htmlContent: String): Sequence<String> = sequence {
+fun ballparkHtmlChunks(htmlContent: String): Sequence<String> = sequence {
     val document = Jsoup.parse(htmlContent)
     val body = document.body() ?: return@sequence
 
     // 1. The intermediate generator: ballparks chunks directly from DOM rules
-    val traverseGenerator = sequence {
-        suspend fun SequenceScope<String>.traverse(node: Node) {
-            when (node) {
-                // free floating text
-                is TextNode -> {
-                    val text = node.text()
-                    if (text.isNotBlank()) yield(text)
-                }
-                // structure elements
-                is Element -> {
-                    val tag = node.tagName().lowercase()
-                    
-                    when {
-                        // breaks break
-                        tag == "br" -> {
-                            yield("\n")
+    suspend fun SequenceScope<String>.traverse(node: Node) {
+        when (node) {
+            // free floating text
+            is TextNode -> {
+                val text = node.text()
+                if (text.isNotBlank()) yield(text)
+            }
+            // structure elements
+            is Element -> {
+                val tag = node.tagName().lowercase()
+                
+                when {
+                    // breaks break
+                    tag == "br" -> {
+                        yield("\n")
+                    }
+                    // for pre, preserve formatting, as it might be important
+                    tag == "pre" -> {
+                        yield(node.wholeText() + "\n\n")
+                    }
+                    // extract alt or title from img
+                    tag == "img" || tag == "image" -> {
+                        val alt = node.attr("alt").trim()
+                        val title = node.attr("title").trim()
+                        if (alt.isNotEmpty()) {
+                            yield(" [Image description: $alt] ")
+                        } else if (title.isNotEmpty()) {
+                            yield(" [Image title: $title] ")
+                        } else {
+                            yield(" [Image, no description available] ")
                         }
-                        // for pre, preserve formatting, as it might be important
-                        tag == "pre" -> {
-                            yield(node.wholeText() + "\n\n")
+                    }
+                    // just grab flattened text from headings and drop a double
+                    // line feed, as they probably don't have punctuation
+                    tag.matches(Regex("h[1-6]")) -> {
+                        yield(node.text() + "\n\n")
+                    }
+                    // everything else:
+                    else -> {
+                        // recurse into both TextNode's and Elements, in order
+                        for (child in node.childNodes()) {
+                            traverse(child)
                         }
-                        // extract alt or title from img
-                        tag == "img" || tag == "image" -> {
-                            val alt = node.attr("alt").trim()
-                            val title = node.attr("title").trim()
-                            if (alt.isNotEmpty()) {
-                                yield(" [Image description: $alt] ")
-                            } else if (title.isNotEmpty()) {
-                                yield(" [Image title: $title] ")
-                            } else {
-                                yield(" [Image, no description available] ")
-                            }
-                        }
-                        // just grab flattened text from headings and drop a double
-                        // line feed, as they probably don't have punctuation
-                        tag.matches(Regex("h[1-6]")) -> {
-                            yield(node.text() + "\n\n")
-                        }
-                        // everything else:
-                        else -> {
-                            // recurse into both TextNode's and Elements, in order
-                            for (child in node.childNodes()) {
-                                traverse(child)
-                            }
 
-                            // when done, check what we were, and issue some relevant whitespace
-                            when (tag) {
-                                "table", "ol", "ul", "dl", "dd", "dt", "li", "tr", "thead" -> yield("\n\n")
-                                "p" -> yield("\n")
-                                "td", "th" -> yield(" ")
-                                else -> if (node.isBlock) yield(" ")
-                            }
-                        } // else
-                    } // when tag == ...
-                } // is Element
-            } // when(node)
-        } // traverse(node)
-        
-        traverse(body)
-    } // traverseGenerator
+                        // when done, check what we were, and issue some relevant whitespace
+                        when (tag) {
+                            "table", "ol", "ul", "dl", "dd", "dt", "li", "tr", "thead" -> yield("\n\n")
+                            "p" -> yield("\n")
+                            "td", "th" -> yield(" ")
+                            else -> if (node.isBlock) yield(" ")
+                        }
+                    } // else
+                } // when tag == ...
+            } // is Element
+        } // when(node)
+    } // traverse(node)
+    
+    traverse(body)
+} // ballparkHtmlChunks
 
+/**
+ * Generic consumer that buffers ballparked strings and yields clean chunks based on punctuation.
+ */
+fun Sequence<String>.chunkByPunctuation(): Sequence<String> = sequence {
     // 2. The consumer: buffers the generated chunks and yields proper sentences
     val buffer = StringBuilder()
     val boundaryRegex = Regex("([.?!][ \\t\\n]|\\n\\n)")
 
-    for (chunk in traverseGenerator) {
+    for (chunk in this@chunkByPunctuation) {
         buffer.append(chunk)
 
         var match = boundaryRegex.find(buffer)

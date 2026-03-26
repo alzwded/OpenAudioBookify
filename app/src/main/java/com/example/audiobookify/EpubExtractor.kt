@@ -29,22 +29,30 @@ import java.io.File
 import java.util.zip.ZipFile
 
 /**
- * Extracts text from an EPub file lazily by traversing its HTML spine elements.
+ * Extracts text from an EPub file lazily, ensuring sentences remain coherent
+ * across multiple internal HTML spine files.
  */
 fun extractEpubTextLazily(
     epubFile: File,
     spineList: List<String>,
     manifestMap: Map<String, String>
-): Sequence<String> = sequence {
-    ZipFile(epubFile).use { zip ->
-        for (id in spineList) {
-            val filePath = manifestMap[id] ?: continue
-            val zipEntry = zip.getEntry(filePath)
+): Sequence<String> {
+    // 1. Create a raw stream of all ballparked chunks from all spine items
+    val ballparkStream = sequence {
+        ZipFile(epubFile).use { zip ->
+            for (id in spineList) {
+                val filePath = manifestMap[id] ?: continue
+                val zipEntry = zip.getEntry(filePath)
 
-            if (zipEntry != null) {
-                val htmlContent = zip.getInputStream(zipEntry).bufferedReader().use { it.readText() }
-                yieldAll(extractHtmlTextLazily(htmlContent))
+                if (zipEntry != null) {
+                    val htmlContent = zip.getInputStream(zipEntry).bufferedReader().use { it.readText() }
+                    // Yield raw ballpark chunks to the aggregate stream
+                    yieldAll(ballparkHtmlChunks(htmlContent))
+                }
             }
         }
     }
+
+    // 2. Apply the punctuation-based chunking logic to the combined stream
+    return ballparkStream.chunkByPunctuation()
 }
