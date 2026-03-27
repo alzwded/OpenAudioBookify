@@ -30,6 +30,7 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.Voice
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -57,6 +58,7 @@ class SettingsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         settingsHelper = SettingsHelper(this)
 
         // Initialize TTS with the saved engine, or default if null
@@ -68,7 +70,12 @@ class SettingsActivity : ComponentActivity() {
                     topBar = {
                         @OptIn(ExperimentalMaterial3Api::class)
                         TopAppBar(
-                            title = { Text("Settings") }
+                            title = { Text("Settings") },
+                            navigationIcon = {
+                                IconButton(onClick = { finish() }) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                }
+                            }
                         )
                     }
                 ) { padding ->
@@ -82,7 +89,7 @@ class SettingsActivity : ComponentActivity() {
                             settingsHelper.ttsEngine = engineId
                             isTtsReady.value = false
                             initTts(engineId)
-                        },
+                        }
                         onVoiceSelected = { voiceId ->
                             // Find the actual Voice object by ID
                             val voiceObj = availableVoices.find { it.name == voiceId }
@@ -346,32 +353,47 @@ fun SettingsScreenContent(
 
 @Preview(showBackground = true)
 @Composable
-fun SettingsPreview() {
+fun SettingsDefaultPreview() {
     MaterialTheme {
-        // We use the stateless "Content" version for the preview.
-        // Note: Engines/Voices are empty because the system classes are final and hard to mock.
-        SettingsScreenContent(
-            rate = 1.25f,
-            onRateChange = {},
-            pitch = 1.0f,
-            onPitchChange = {},
-            bitrate = "48000",
-            onBitrateChange = {},
-            isTtsReady = true,
-            engines = listOf(
-                TtsEngine("com.google.android.tts", "Google Speech Services"),
-                TtsEngine("com.amazon.tts", "Amazon Polly")
-            ),
-            voices = listOf(
-                TtsVoice("en-us-x-sfg", "English (US) - Voice I"),
-                TtsVoice("en-us-x-ntk", "English (US) - Voice II"),
-                TtsVoice("en-gb-x-fis", "English (UK) - Voice III")
-            ),
-            currentEngineId = "com.google.android.tts",
-            onEngineSelected = {},
-            currentVoiceId = "en-us-x-ntk",
-            onVoiceSelected = {},
-            onPlaySample = {}
-        )
+        Scaffold(
+            topBar = {
+                @OptIn(ExperimentalMaterial3Api::class)
+                TopAppBar(
+                    title = { Text("Settings") }
+                    navigationIcon = {
+                        IconButton(onClick = {}) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    }
+                )
+            }
+        ) { padding ->
+            // We use the stateless "Content" version for the preview.
+            // Note: Engines/Voices are empty because the system classes are final and hard to mock.
+            SettingsScreenContent(
+                rate = 1.25f,
+                onRateChange = {},
+                pitch = 1.0f,
+                onPitchChange = {},
+                bitrate = "48000",
+                onBitrateChange = {},
+                isTtsReady = true,
+                engines = listOf(
+                    TtsEngine("com.google.android.tts", "Google Speech Services"),
+                    TtsEngine("com.amazon.tts", "Amazon Polly")
+                ),
+                voices = listOf(
+                    TtsVoice("en-us-x-sfg", "English (US) - Voice I"),
+                    TtsVoice("en-us-x-ntk", "English (US) - Voice II"),
+                    TtsVoice("en-gb-x-fis", "English (UK) - Voice III")
+                ),
+                currentEngineId = "com.google.android.tts",
+                onEngineSelected = {},
+                currentVoiceId = "en-us-x-ntk",
+                onVoiceSelected = {},
+                onPlaySample = {},
+                modifier = Modifier.padding(padding)
+            )
+        }
     }
 }

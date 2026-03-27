@@ -37,6 +37,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import android.provider.OpenableColumns
 import android.widget.Toast
@@ -220,6 +221,13 @@ fun AudioBookifyApp(viewModel: MainViewModel) {
                 actions = {
                     IconButton(
                         onClick = {
+                            context.startActivity(Intent(context, AboutActivity::class.java))
+                        }
+                    ) {
+                        Icon(Icons.Default.Info, contentDescription = "About")
+                    }
+                    IconButton(
+                        onClick = {
                             context.startActivity(Intent(context, SettingsActivity::class.java))
                         }
                     ) {
@@ -360,6 +368,9 @@ fun DefaultPreview() {
                 TopAppBar(
                     title = { Text("AudioBookify") },
                     actions = {
+                        IconButton(onClick = {}) {
+                            Icon(Icons.Default.Settings, contentDescription = "About")
+                        }
                         IconButton(onClick = {}) {
                             Icon(Icons.Default.Settings, contentDescription = "Settings")
                         }
