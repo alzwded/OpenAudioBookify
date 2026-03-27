@@ -10,12 +10,12 @@
 - [x] In AudiobookPipeline, configure AAC settings, i.e. Mono, 48kbps bitrate, etc; there should be per-app settings of these things
 - [ ] ~~Rework pipeline and chunkers to generate any number of m4a files and merge them, see "Merge M4A Files with Media3 Transformer" chat; intermediate m4a files should be written to Cache folder; rework output path to be an output file (the final m4a file); basically merge everything into one giant stream~~ not sure that's useful...
 - [x] add icon
-- [ ] Configuration screen with persistent settings
-  * [ ] TTS settings?
-    + [ ] language/dialect/voice; should read system TTS settings if possible
-    + [ ] speech rate
-    + [ ] speech pitch
-  * [ ] AAC settings (mostly bitrate)
+- [x] Configuration screen with persistent settings
+  * [x] TTS settings?
+    + [x] language/dialect/voice; should read system TTS settings if possible
+    + [x] speech rate
+    + [x] speech pitch
+  * [x] AAC settings (mostly bitrate)
 - [ ] Add "about" info on the settings screen, like a new audiobookifyapp@gmail.com contact info, link to github etc
 - [x] check for node.isBlock in html extractor is probably overeager and dubious; should refactor to yield innerText on leaf nodes OR consider a node with child textnodes to be a leaf
 - [x] Ensure main window keeps track of global "doing something" vs "idle" state. In "doing something", the only action is "Cancel"; in "idle", you can select books, change settings, and hit start. Something about LocalBinder and StateFlow

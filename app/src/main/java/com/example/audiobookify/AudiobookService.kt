@@ -38,6 +38,7 @@ import android.os.Build
 import android.os.IBinder
 import android.provider.OpenableColumns
 import android.speech.tts.TextToSpeech
+import android.speech.tts.Voice
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
@@ -155,8 +156,11 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                 tts?.language = Locale.getDefault()
             }
 
-            settingsHelper.ttsVoice?.let {
-                tts?.voice = settingsHelper.ttsVoice
+            settingsHelper.ttsVoice?.let { voiceName ->
+                val targetVoice = tts?.voices?.find { it.name == voiceName }
+                if (targetVoice != null) {
+                    tts?.voice = targetVoice
+                }
             }
 
             tts?.setSpeechRate(settingsHelper.speechRate)
