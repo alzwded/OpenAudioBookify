@@ -31,7 +31,9 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.net.Uri
+import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.provider.OpenableColumns
@@ -39,6 +41,8 @@ import android.speech.tts.TextToSpeech
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.util.Locale
 
 private const val TAG = "AUDIOBOOK_SERVICE"
@@ -51,13 +55,23 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
         const val COMPLETED_NOTIFICATION_ID = 2
         const val ACTION_START = "ACTION_START"
         const val ACTION_CANCEL = "ACTION_CANCEL"
-        const val EXTRA_BOOK_URIS = "EXTRA_BOOK_URIS" 
+        const val EXTRA_BOOK_URIS = "EXTRA_BOOK_URIS"
     }
+
+    // --- Service Binding & State ---
+    inner class LocalBinder : Binder() {
+        fun getService(): AudiobookService = this@AudiobookService
+    }
+    private val binder = LocalBinder()
+
+    private val _isProcessing = MutableStateFlow(false)
+    val isProcessing = _isProcessing.asStateFlow()
+    // -------------------------------
 
     private var tts: TextToSpeech? = null
     private var pipeline: AudiobookPipeline? = null
     private var outputDirUri: Uri? = null
-    
+
     // A queue to hold the pending URIs to process sequentially
     private val bookQueue = ArrayDeque<Uri>()
 
@@ -75,7 +89,18 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
         when (intent?.action) {
             ACTION_START -> {
                 Log.i(TAG, "Starting")
-                startForeground(NOTIFICATION_ID, buildNotification("Initializing engine..."))
+                _isProcessing.value = true
+
+                // Android 14+ Requires specifying foreground service type
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    startForeground(
+                        NOTIFICATION_ID,
+                        buildNotification("Initializing engine..."),
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                    )
+                } else {
+                    startForeground(NOTIFICATION_ID, buildNotification("Initializing engine..."))
+                }
 
                 // Extract output directory
                 val outUri: Uri? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -84,7 +109,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                     @Suppress("DEPRECATION")
                     intent.getParcelableExtra("EXTRA_OUTPUT_URI")
                 }
-                
+
                 if (outUri != null) {
                     outputDirUri = outUri
                 }
@@ -99,7 +124,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
 
                 if (!uris.isNullOrEmpty()) {
                     bookQueue.addAll(uris)
-                    
+
                     if (tts == null) {
                         tts = TextToSpeech(this, this)
                     } else if (pipeline == null) {
@@ -132,7 +157,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
 
     private fun processNextBook() {
         val nextUri = bookQueue.removeFirstOrNull()
-        
+
         if (nextUri == null) {
             Log.i(TAG, "No more books in queue, shutting down")
             showCompletionNotification()
@@ -140,6 +165,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
             return
         }
 
+        _isProcessing.value = true
         Log.i(TAG, "Next book")
 
         var bookName = "Unknown_Book"
@@ -151,7 +177,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                 }
             }
         }
-        
+
         // Strip out the extension for cleaner file names later
         val cleanBookName = bookName.substringBeforeLast(".")
         val book = Book(cleanBookName, nextUri)
@@ -171,7 +197,6 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                         bookName = book.name,
                         outputDirUri = outputDirUri
                     ) {
-                        // TODO this isn't a race condition with enqueuing new books, is it?
                         pipeline = null
                         processNextBook()
                     }
@@ -196,8 +221,14 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
         tts?.stop()
         tts?.shutdown()
         tts = null
+        _isProcessing.value = false
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+    }
+
+    override fun onTimeout(startId: Int, fsiKind: Int) {
+        Log.w(TAG, "Service timed out, cleaning up...")
+        shutdownService()
     }
 
     override fun onDestroy() {
@@ -258,5 +289,6 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
         }
     }
 
-    override fun onBind(intent: Intent?): IBinder? = null
+    // Now returning the binder instead of null
+    override fun onBind(intent: Intent?): IBinder = binder
 }

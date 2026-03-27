@@ -26,11 +26,16 @@
 package com.example.audiobookify
 
 import android.Manifest
+import android.app.Application
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -38,55 +43,101 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 data class Book(val name: String, val uri: Uri)
+
+// --- ViewModel to Bridge Service & Compose ---
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+    private var audiobookService: AudiobookService? = null
+
+    private val _isServiceActive = MutableStateFlow(false)
+    val isServiceActive = _isServiceActive.asStateFlow()
+
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            val binder = service as AudiobookService.LocalBinder
+            audiobookService = binder.getService()
+
+            // Listen to the service's state flow
+            viewModelScope.launch {
+                audiobookService?.isProcessing?.collect { processing ->
+                    _isServiceActive.value = processing
+                }
+            }
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            audiobookService = null
+            _isServiceActive.value = false
+        }
+    }
+
+    init {
+        // Bind to service immediately upon ViewModel creation
+        val intent = Intent(application, AudiobookService::class.java)
+        application.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+    }
+
+    fun cancelWork() {
+        val intent = Intent(getApplication(), AudiobookService::class.java).apply {
+            action = AudiobookService.ACTION_CANCEL
+        }
+        // Starting the service with the cancel intent fires onStartCommand
+        getApplication<Application>().startService(intent)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        getApplication<Application>().unbindService(connection)
+    }
+}
+// -------------------------------------------
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Explicitly enable edge-to-edge but we will handle paddings in Compose
+
         enableEdgeToEdge()
-        
+
         setContent {
             MaterialTheme {
-                AudioBookifyApp()
+                val viewModel: MainViewModel = viewModel()
+                AudioBookifyApp(viewModel = viewModel)
             }
         }
     }
 }
 
 @Composable
-fun AudioBookifyApp() {
+fun AudioBookifyApp(viewModel: MainViewModel) {
     val context = LocalContext.current
     var selectedBooks by remember { mutableStateOf<List<Book>>(emptyList()) }
     var outputDirUri by remember { mutableStateOf<Uri?>(null) }
-    
-    // Check notification permission for Android 13+ (Required for Foreground Services)
+
+    // Track the service state from the ViewModel
+    val isProcessing by viewModel.isServiceActive.collectAsStateWithLifecycle()
+
     var hasNotificationPermission by remember {
         mutableStateOf(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -131,7 +182,6 @@ fun AudioBookifyApp() {
         contract = ActivityResultContracts.OpenDocumentTree(),
         onResult = { uri ->
             outputDirUri = uri
-            // Persist read/write permissions for the selected directory across restarts
             uri?.let {
                 val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 context.contentResolver.takePersistableUriPermission(it, takeFlags)
@@ -145,7 +195,7 @@ fun AudioBookifyApp() {
             putParcelableArrayListExtra(AudiobookService.EXTRA_BOOK_URIS, ArrayList(selectedBooks.map { it.uri }))
             putExtra("EXTRA_OUTPUT_URI", outputDirUri)
         }
-        
+
         ContextCompat.startForegroundService(context, intent)
         Toast.makeText(context, "Processing started in background", Toast.LENGTH_SHORT).show()
     }
@@ -153,6 +203,7 @@ fun AudioBookifyApp() {
     AudioBookifyContent(
         selectedBooks = selectedBooks,
         outputDirUri = outputDirUri,
+        isProcessing = isProcessing,
         onAddBooksClick = { filePickerLauncher.launch(arrayOf("*/*")) },
         onSetOutputFolderClick = { dirPickerLauncher.launch(null) },
         onStartProcessingClick = {
@@ -170,7 +221,8 @@ fun AudioBookifyApp() {
                 }
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
-        }
+        },
+        onCancelProcessingClick = { viewModel.cancelWork() }
     )
 }
 
@@ -178,9 +230,11 @@ fun AudioBookifyApp() {
 fun AudioBookifyContent(
     selectedBooks: List<Book>,
     outputDirUri: Uri?,
+    isProcessing: Boolean,
     onAddBooksClick: () -> Unit,
     onSetOutputFolderClick: () -> Unit,
-    onStartProcessingClick: () -> Unit
+    onStartProcessingClick: () -> Unit,
+    onCancelProcessingClick: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -197,40 +251,52 @@ fun AudioBookifyContent(
                 text = "AudioBookify",
                 style = MaterialTheme.typography.headlineMedium
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Button(
                 onClick = onAddBooksClick,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isProcessing // Disable while processing
             ) {
                 Text("Add Books (TXT, EPUB, etc.)")
             }
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             Button(
                 onClick = onSetOutputFolderClick,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isProcessing // Disable while processing
             ) {
                 Text(if (outputDirUri == null) "Set Output Folder" else "Output Set")
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Text(text = "Books to process:", style = MaterialTheme.typography.titleMedium)
-            
+
             LazyColumn(modifier = Modifier.weight(1f)) {
                 items(selectedBooks) { book ->
                     Text(text = book.name, modifier = Modifier.padding(vertical = 4.dp))
                 }
             }
-            
-            Button(
-                onClick = onStartProcessingClick,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Start Processing")
+
+            if (isProcessing) {
+                Button(
+                    onClick = onCancelProcessingClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Cancel Processing")
+                }
+            } else {
+                Button(
+                    onClick = onStartProcessingClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Start Processing")
+                }
             }
         }
     }
@@ -240,6 +306,7 @@ fun AudioBookifyContent(
 @Composable
 fun DefaultPreview() {
     MaterialTheme {
+        var previewIsProcessing by remember { mutableStateOf(false) }
         AudioBookifyContent(
             selectedBooks = listOf(
                 Book("The Great Gatsby.epub", Uri.EMPTY),
@@ -247,9 +314,15 @@ fun DefaultPreview() {
                 Book("Pride and Prejudice.html", Uri.EMPTY)
             ),
             outputDirUri = null,
+            isProcessing = previewIsProcessing,
             onAddBooksClick = {},
             onSetOutputFolderClick = {},
-            onStartProcessingClick = {}
+            onStartProcessingClick = {
+                previewIsProcessing = true
+            },
+            onCancelProcessingClick = {
+                previewIsProcessing = false
+            }
         )
     }
 }

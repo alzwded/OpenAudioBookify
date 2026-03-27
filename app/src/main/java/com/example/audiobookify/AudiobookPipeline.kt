@@ -301,6 +301,13 @@ class AudiobookPipeline(
         }
         encodedChunkFiles.clear()
 
+        context.cacheDir.listFiles()?.forEach { file ->
+            if (file.name.startsWith("temp_audiobook_chunk_") || 
+                file.name == "final_merged_audiobook.m4a") {
+                file.delete()
+            }
+        }
+
         if (finalTempFile?.exists() == true) {
             finalTempFile.delete()
         }
