@@ -16,10 +16,9 @@
     + [x] speech rate
     + [x] speech pitch
   * [x] AAC settings (mostly bitrate)
-- [ ] Add "about" info on the settings screen, like a new audiobookifyapp@gmail.com contact info, link to github etc; or maybe just stick it in the topbar
 - [x] check for node.isBlock in html extractor is probably overeager and dubious; should refactor to yield innerText on leaf nodes OR consider a node with child textnodes to be a leaf
 - [x] Ensure main window keeps track of global "doing something" vs "idle" state. In "doing something", the only action is "Cancel"; in "idle", you can select books, change settings, and hit start. Something about LocalBinder and StateFlow
+- [x] When "doing something", ensure we track which books were processed, which is being processed, which are done. I.e. add progressbar to stateflow
+- [ ] Add "about" info on the settings screen, like a new audiobookifyapp@gmail.com contact info, link to github etc; or maybe just stick it in the topbar
 - [ ] change domain from com.example.audiobookify to alzwded.audiobookify
-- [ ] When "doing something", ensure we track which books were processed, which is being processed, which are done. I.e. add progressbar to stateflow
-- [ ] Default output path?
 - [ ] Check cancel works

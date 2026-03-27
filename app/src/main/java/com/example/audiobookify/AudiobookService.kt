@@ -48,6 +48,13 @@ import java.util.Locale
 
 private const val TAG = "AUDIOBOOK_SERVICE"
 
+enum class BookStatus { QUEUED, PROCESSING, FINISHED }
+data class BookState(
+    val uri: Uri,
+    val name: String,
+    val status: BookStatus,
+    val currentChunk: Int = 0)
+
 class AudiobookService : Service(), TextToSpeech.OnInitListener {
 
     companion object {
@@ -67,6 +74,9 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
 
     private val _isProcessing = MutableStateFlow(false)
     val isProcessing = _isProcessing.asStateFlow()
+
+    private val _queueStatus = MutableStateFlow<List<BookState>>(emptyList())
+    val queueState = _queueState.asStateFlow()
     // -------------------------------
 
     private var tts: TextToSpeech? = null
@@ -80,6 +90,12 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
     // Service-bound Coroutine Scope
     private val serviceJob = Job()
     private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
+
+    private fun updateBookState(uri: Uri, status: BookStatus, chunk: Int = 0) {
+        _queueState.value = _queueState.value.map {
+            if (it.uri == uri) it.copy(status = status, currentChunk = chunk) else it
+        }
+    }
 
     override fun onCreate() {
         Log.i(TAG, "Creating service")
@@ -126,6 +142,20 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                 }
 
                 if (!uris.isNullOrEmpty()) {
+                    val newBooks = uris.map { uri ->
+                        // TODO refactor this, we're doing it twice...
+                        var bookName = "Unknown_Book"
+                        contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                            if (cursor.moveToFirst()) {
+                                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                                if (nameIndex != -1) {
+                                    bookName = cursor.getString(nameIndex)
+                                }
+                            }
+                        }
+                        BookState(uri, bookName, BooStatus.QUEUED, 0)
+                    }
+
                     bookQueue.addAll(uris)
 
                     if (tts == null) {
@@ -199,6 +229,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
         val cleanBookName = bookName.substringBeforeLast(".")
         val book = Book(cleanBookName, nextUri)
 
+        updateBookState(nextUri, BookStatus.PROCESSING, 0)
         updateNotification("Generating Audiobook: $cleanBookName...")
 
         serviceScope.launch(Dispatchers.IO) {
@@ -213,9 +244,13 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                         provider = provider,
                         bookName = book.name,
                         outputDirUri = outputDirUri,
-                        settingsHelper.encoderBitrate
+                        settingsHelper.encoderBitrate,
+                        onProgress = { chunk ->
+                            updateBookState(nextUri, BookStatus.PROCESSING, chunk)
+                        }
                     ) {
                         pipeline = null
+                        updateBookState(nextUri, BookStatus.FINISHED)
                         processNextBook()
                     }
                     pipeline?.start()
@@ -234,6 +269,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
     private fun shutdownService() {
         Log.i(TAG, "Shutting down")
         bookQueue.clear()
+        _queueState.value = emptyList()
         pipeline?.cancel()
         pipeline = null
         tts?.stop()

@@ -86,6 +86,7 @@ class AudiobookPipeline(
     private val bookName: String,
     private val outputDirUri: Uri?,
     private val targetBitrate: Int = 48000,
+    private val onProgress: (Int) -> Unit = {},
     private val onPipelineComplete: () -> Unit
 ) {
     private val textChunks: Iterator<String> = provider.extractText().batchByLength(3900).iterator()
@@ -183,6 +184,9 @@ class AudiobookPipeline(
         }
 
         Log.i(TAG, "Processing next chunk $chunkIndex")
+
+        chunkIndex++
+        onProgress(chunkIndex)
 
         val text = textChunks.next()
         val wavFile = getWavFile(chunkIndex)

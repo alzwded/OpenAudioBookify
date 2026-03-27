@@ -76,6 +76,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isServiceActive = MutableStateFlow(false)
     val isServiceActive = _isServiceActive.asStateFlow()
 
+    private val _queueState = MutableStateFlow<List<BookState>>(emptyList())
+    val queueState = _queueState.asStateFlow()
+
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             val binder = service as AudiobookService.LocalBinder
@@ -85,6 +88,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             viewModelScope.launch {
                 audiobookService?.isProcessing?.collect { processing ->
                     _isServiceActive.value = processing
+                }
+            }
+            viewModelScope.launch {
+                audiobookService?.queueState?.collect { state ->
+                    _queueState.value = state
                 }
             }
         }
@@ -140,6 +148,7 @@ fun AudioBookifyApp(viewModel: MainViewModel) {
 
     // Track the service state from the ViewModel
     val isProcessing by viewModel.isServiceActive.collectAsStateWithLifecycle()
+    val queueState by viewModel.queueState.collectAsStateWithLifecycle()
 
     var hasNotificationPermission by remember {
         mutableStateOf(
@@ -291,9 +300,33 @@ fun AudioBookifyContent(
 
             Text(text = "Books to process:", style = MaterialTheme.typography.titleMedium)
 
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(selectedBooks) { book ->
-                    Text(text = book.name, modifier = Modifier.padding(vertical = 4.dp))
+            if (isProcessing && queueState.isNotEmpty()) {
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(queueState) { book ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = book.name,
+                                modifier = Modifier.weight(1f).padding(end = 8.dp),
+                                maxLines = 1
+                            )
+                            when (book.status) {
+                                BookStatus.QUEUED -> Text("Queued")
+                                BookStatus.PROCESSING -> Text("Processing (Chunk ${book.currentChunk})")
+                                BookStatus.FINISHED -> Text("Finished")
+                            }
+                        }
+                    }
+                }
+            } else {
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(selectedBooks) { book ->
+                        Text(text = book.name, modifier = Modifier.padding(vertical = 4.dp))
+                    }
                 }
             }
 
@@ -344,6 +377,11 @@ fun DefaultPreview() {
                 ),
                 outputDirUri = null,
                 isProcessing = previewIsProcessing,
+                queueState = listOf(
+                    BookState(Uri.EMPTY, "The Great Gatsby.epub", BookStatus.FINISHED, 8960),
+                    BookState(Uri.EMPTY, "1984.txt", BookState.PROCESSING, 42),
+                    BookState(Uri.EMPTY, "Pride and Prejudice.html", BookState.QUEUED, 0)
+                ),
                 onAddBooksClick = {},
                 onSetOutputFolderClick = {},
                 onStartProcessingClick = {
