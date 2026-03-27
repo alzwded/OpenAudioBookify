@@ -37,11 +37,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import java.util.Locale
+
+// Simple Display Models for the UI
+data class TtsEngine(val id: String, val label: String)
+data class TtsVoice(val id: String, val displayName: String)
 
 class SettingsActivity : ComponentActivity() {
     private lateinit var settingsHelper: SettingsHelper
@@ -74,16 +76,20 @@ class SettingsActivity : ComponentActivity() {
                         isTtsReady = isTtsReady.value,
                         engines = availableEngines,
                         voices = availableVoices,
-                        onEngineSelected = { newEngine ->
+                        onEngineSelected = { engineId ->
                             // When engine changes, save it and re-initialize to fetch its specific voices
-                            settingsHelper.ttsEngine = newEngine
+                            settingsHelper.ttsEngine = engineId
                             isTtsReady.value = false
-                            initTts(newEngine)
+                            initTts(engineId)
                         },
-                        onVoiceSelected = { newVoice ->
-                            settingsHelper.ttsVoice = newVoice.name
-                            settingsHelper.ttsLanguage = newVoice.locale.toLanguageTag()
-                            tts?.voice = newVoice // Apply immediately for sample
+                        onVoiceSelected = { voiceId ->
+                            // Find the actual Voice object by ID
+                            val voiceObj = availableVoices.find { it.name == voiceId }
+                            voiceObj?.let {
+                                settingsHelper.ttsVoice = it.name
+                                settingsHelper.ttsLanguage = it.locale.toLanguageTag()
+                                tts?.voice = it
+                            }
                         },
                         onPlaySample = {
                             tts?.let { t ->
@@ -111,28 +117,8 @@ class SettingsActivity : ComponentActivity() {
                 tts?.let { t ->
                     availableEngines.clear()
                     availableEngines.addAll(t.engines)
-
                     availableVoices.clear()
-                    try {
-                        t.voices?.let { voices -> 
-                            availableVoices.addAll(voices.sortedBy { it.name }) 
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-
-                    // Auto-initialize defaults if they haven't been set yet
-                    if (settingsHelper.ttsEngine == null) {
-                        settingsHelper.ttsEngine = t.defaultEngine
-                    }
-                    if (settingsHelper.ttsVoice == null) {
-                        settingsHelper.ttsVoice = t.voice?.name
-                    }
-                    if (settingsHelper.ttsLanguage == null) {
-                        settingsHelper.ttsLanguage = t.voice?.locale?.toLanguageTag() 
-                            ?: t.language?.toLanguageTag()
-                    }
-
+                    t.voices?.let { availableVoices.addAll(it) }
                     isTtsReady.value = true
                 }
             }
@@ -145,7 +131,9 @@ class SettingsActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Stateful wrapper that connects the UI to the SettingsHelper logic.
+ */
 @Composable
 fun SettingsScreen(
     settingsHelper: SettingsHelper,
@@ -153,22 +141,60 @@ fun SettingsScreen(
     engines: List<TextToSpeech.EngineInfo>,
     voices: List<Voice>,
     onEngineSelected: (String) -> Unit,
-    onVoiceSelected: (Voice) -> Unit,
+    onVoiceSelected: (String) -> Unit,
     onPlaySample: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Local UI state for immediate slider/text feedback
     var rate by remember { mutableFloatStateOf(settingsHelper.speechRate) }
     var pitch by remember { mutableFloatStateOf(settingsHelper.pitch) }
     var bitrate by remember { mutableStateOf(settingsHelper.encoderBitrate.toString()) }
 
-    // Read current settings dynamically to react when auto-initialized or changed
-    var currentEngine by remember(settingsHelper.ttsEngine, isTtsReady) { 
-        mutableStateOf(settingsHelper.ttsEngine ?: "") 
-    }
-    var currentVoice by remember(settingsHelper.ttsVoice, isTtsReady) { 
-        mutableStateOf(settingsHelper.ttsVoice ?: "") 
-    }
+    // Map system objects to our simple Display Models
+    val engineModels = engines.map { TtsEngine(it.name, it.label) }
+    val voiceModels = voices.map { TtsVoice(it.name, "${it.name} (${it.locale.displayName})") }
 
+    SettingsScreenContent(
+        rate = rate,
+        onRateChange = { rate = it; settingsHelper.speechRate = it },
+        pitch = pitch,
+        onPitchChange = { pitch = it; settingsHelper.pitch = it },
+        bitrate = bitrate,
+        onBitrateChange = {
+            bitrate = it
+            it.toIntOrNull()?.let { intVal -> settingsHelper.encoderBitrate = intVal }
+        },
+        isTtsReady = isTtsReady,
+        engines = engineModels,
+        voices = voiceModels,
+        currentEngineId = settingsHelper.ttsEngine ?: "",
+        onEngineSelected = onEngineSelected,
+        currentVoiceId = settingsHelper.ttsVoice ?: "",
+        onVoiceSelected = onVoiceSelected,
+        onPlaySample = onPlaySample,
+        modifier = modifier
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreenContent(
+    rate: Float,
+    onRateChange: (Float) -> Unit,
+    pitch: Float,
+    onPitchChange: (Float) -> Unit,
+    bitrate: String,
+    onBitrateChange: (String) -> Unit,
+    isTtsReady: Boolean,
+    engines: List<TtsEngine>,
+    voices: List<TtsVoice>,
+    currentEngineId: String,
+    onEngineSelected: (String) -> Unit,
+    currentVoiceId: String,
+    onVoiceSelected: (String) -> Unit,
+    onPlaySample: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(
         modifier = modifier
             .padding(16.dp)
@@ -187,7 +213,7 @@ fun SettingsScreen(
                 onExpandedChange = { engineExpanded = !engineExpanded }
             ) {
                 OutlinedTextField(
-                    value = engines.find { it.name == currentEngine }?.label ?: currentEngine,
+                    value = engines.find { it.id == currentEngineId }?.label ?: currentEngineId,
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("TTS Engine") },
@@ -202,8 +228,7 @@ fun SettingsScreen(
                         DropdownMenuItem(
                             text = { Text(engine.label) },
                             onClick = {
-                                currentEngine = engine.name
-                                onEngineSelected(engine.name)
+                                onEngineSelected(engine.id)
                                 engineExpanded = false
                             }
                         )
@@ -221,7 +246,7 @@ fun SettingsScreen(
             ) {
                 OutlinedTextField(
                     // Display voice name alongside its friendly locale name
-                    value = voices.find { it.name == currentVoice }?.let { "${it.name} (${it.locale.displayName})" } ?: currentVoice,
+                    value = voices.find { it.id == currentVoiceId }?.displayName ?: currentVoiceId,
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("TTS Voice") },
@@ -234,10 +259,9 @@ fun SettingsScreen(
                 ) {
                     voices.forEach { voice ->
                         DropdownMenuItem(
-                            text = { Text("${voice.name} (${voice.locale.displayName})") },
+                            text = { Text(voice.displayName) },
                             onClick = {
-                                currentVoice = voice.name
-                                onVoiceSelected(voice)
+                                onVoiceSelected(voice.id)
                                 voiceExpanded = false
                             }
                         )
@@ -250,26 +274,26 @@ fun SettingsScreen(
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("Speech Rate: ${"%.2f".format(rate)}x", style = MaterialTheme.typography.bodyLarge)
-            TextButton(onClick = { rate = 1.0f; settingsHelper.speechRate = 1.0f }) {
+            TextButton(onClick = { onRateChange(1.0f) }) {
                 Text("Reset")
             }
         }
         Slider(
             value = rate,
-            onValueChange = { rate = it; settingsHelper.speechRate = it },
+            onValueChange = onRateChange,
             valueRange = 0.5f..4.0f
         )
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("Pitch: ${"%.2f".format(pitch)}", style = MaterialTheme.typography.bodyLarge)
-            TextButton(onClick = { pitch = 1.0f; settingsHelper.pitch = 1.0f }) {
+            TextButton(onClick = { onPitchChange(1.0f) }) {
                 Text("Reset")
             }
         }
         Slider(
             value = pitch,
-            onValueChange = { pitch = it; settingsHelper.pitch = it },
+            onValueChange = onPitchChange
             valueRange = 0.25f..2.0f
         )
 
@@ -287,13 +311,42 @@ fun SettingsScreen(
 
         OutlinedTextField(
             value = bitrate,
-            onValueChange = { 
-                bitrate = it
-                it.toIntOrNull()?.let { intVal -> settingsHelper.encoderBitrate = intVal }
-            },
+            onValueChange = onBitrateChange,
             label = { Text("Encoder Bitrate (bps) - Default 48000") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SettingsPreview() {
+    MaterialTheme {
+        // We use the stateless "Content" version for the preview.
+        // Note: Engines/Voices are empty because the system classes are final and hard to mock.
+        SettingsScreenContent(
+            rate = 1.25f,
+            onRateChange = {},
+            pitch = 1.0f,
+            onPitchChange = {},
+            bitrate = "48000",
+            onBitrateChange = {},
+            isTtsReady = true,
+            engines = listOf(
+                TtsEngine("com.google.android.tts", "Google Speech Services"),
+                TtsEngine("com.amazon.tts", "Amazon Polly")
+            ),
+            voices = listOf(
+                TtsVoice("en-us-x-sfg", "English (US) - Voice I"),
+                TtsVoice("en-us-x-ntk", "English (US) - Voice II"),
+                TtsVoice("en-gb-x-fis", "English (UK) - Voice III")
+            ),
+            currentEngineId = "com.google.android.tts",
+            onEngineSelected = {},
+            currentVoiceId = "en-us-x-ntk",
+            onVoiceSelected = {},
+            onPlaySample = {}
         )
     }
 }
