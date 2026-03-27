@@ -1,14 +1,15 @@
 # AudioBookify Project Plan
 
 ## Statement of Work
-AudioBookify is an Android application designed to convert text-based documents (TXT, EPUB, HTML) into high-quality audio files using Android's Text-to-Speech (TTS) engines. The app will feature smart content splitting and background processing.
+AudioBookify is an Android application designed to convert text-based documents (TXT, EPUB, HTML, MD) into high-quality audio files using Android's Text-to-Speech (TTS) engines. The app will feature smart content splitting and background processing.
 
 ### Core Features:
 1.  **Document Import & Management**:
-    - Support for `.txt`, `.epub`, and `.html` files via System File Picker.
+    - Support for `.txt`, `.epub`, `.md` and `.html` files via System File Picker.
     - Persistent storage of imported "books" or "documents".
 2.  **Text Extraction Engine**:
     - Plain text extraction for `.txt`.
+    - Markdown extraction for `.md`.
     - HTML parsing using Jsoup to remove boilerplate and extract main content.
     - EPUB parsing to handle chapters and navigation structure.
 3.  **TTS Configuration**:
@@ -17,28 +18,19 @@ AudioBookify is an Android application designed to convert text-based documents 
     - Real-time adjustment of Pitch and Speech Rate.
 4.  **Audio Generation & Chunking**:
     - Background synthesis using `synthesizeToFile`.
-    - Split audio into user-defined durations (e.g., 10-minute chunks).
+    - Stream paragraph chunks into TTS into Media3 Transformer to intermediate parts.
+    - Consolidate parts into final audiobook.
     - Intelligent splitting at paragraph or sentence boundaries.
-    - Support for `.mp3` or `.m4a` formats (depending on TTS engine support and Android version).
+    - Support for `.m4a` or other formats (depending on TTS engine support and Android version).
 5.  **Queue & Progress Tracking**:
-    - WorkManager for reliable background execution.
+    - ForegroundService allowing easy cancellation or queue monitoring.
     - Notification-based progress updates.
 
 ## Architecture
 - **Pattern**: MVVM (Model-View-ViewModel) + Clean Architecture.
 - **UI**: Jetpack Compose for all screens.
-- **Dependency Injection**: Hilt (preferred) or Koin.
-- **Data Persistence**: Room for storing document metadata and processing status.
+- **Scratch Storage**: use cache, be efficient about cleanup
 - **File Handling**: Scoped Storage compliance.
 - **Asynchrony**: Kotlin Coroutines and Flow.
 
-## Proposed Module Structure
-- `:app`: Main UI and DI setup.
-- `:core`: Shared models and utilities.
-- `:domain`: Business logic, use cases, and repository interfaces.
-- `:data`: Repository implementations, Room DB, and File IO.
-- `:tts`: TTS engine wrappers and synthesis logic.
-- `:parser`: Text extraction logic for different file formats.
-
-## Work Log
-- **2023-10-27**: Initialized `AGENTS.md` with the project plan and architecture overview.
+See also AUDIOBOOK_PIPELINE.md
