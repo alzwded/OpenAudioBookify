@@ -85,6 +85,7 @@ class AudiobookPipeline(
     private val provider: BookTextProvider,
     private val bookName: String,
     private val outputDirUri: Uri?,
+    private val targetBitrate: Int = 48000,
     private val onPipelineComplete: () -> Unit
 ) {
     private val textChunks: Iterator<String> = provider.extractText().batchByLength(3900).iterator()
@@ -107,7 +108,7 @@ class AudiobookPipeline(
             ): Codec {
                 val customFormat = format.buildUpon()
                     .setChannelCount(1)
-                    .setAverageBitrate(48000)
+                    .setAverageBitrate(targetBitrate)
                     .build()
                 return defaultEncoderFactory.createForAudioEncoding(customFormat, logSessionId)
             }

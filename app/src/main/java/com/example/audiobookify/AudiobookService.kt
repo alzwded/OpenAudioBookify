@@ -71,6 +71,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
     private var tts: TextToSpeech? = null
     private var pipeline: AudiobookPipeline? = null
     private var outputDirUri: Uri? = null
+    private lateinit var settingsHelper: SettingsHelper
 
     // A queue to hold the pending URIs to process sequentially
     private val bookQueue = ArrayDeque<Uri>()
@@ -82,6 +83,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
     override fun onCreate() {
         Log.i(TAG, "Creating service")
         super.onCreate()
+        settingsHelper = SettingsHelper(this)
         createNotificationChannel()
     }
 
@@ -126,7 +128,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                     bookQueue.addAll(uris)
 
                     if (tts == null) {
-                        tts = TextToSpeech(this, this)
+                        tts = TextToSpeech(this, this, settingsHelper.ttsEngine)
                     } else if (pipeline == null) {
                         Log.i(TAG, "Pipeline does not exist, starting")
                         processNextBook()
@@ -147,7 +149,18 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
     override fun onInit(status: Int) {
         Log.i(TAG, "onInit $status")
         if (status == TextToSpeech.SUCCESS) {
-            tts?.language = Locale.US
+            settingsHelper.ttsLanguage?.let {
+                tts?.language = Locale.forLanguageTag(it)
+            } ?: run {
+                tts?.language = Locale.getDefault()
+            }
+
+            settingsHelper.ttsVoice?.let {
+                tts?.voice = settingsHelper.ttsVoice
+            }
+
+            tts?.setSpeechRate(settingsHelper.speechRate)
+            tts?.setPitch(settingsHelper.pitch)
             processNextBook()
         } else {
             updateNotification("Failed to initialize TTS.")
@@ -195,7 +208,8 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                         tts = tts!!,
                         provider = provider,
                         bookName = book.name,
-                        outputDirUri = outputDirUri
+                        outputDirUri = outputDirUri,
+                        settingsHelper.encoderBitrate
                     ) {
                         pipeline = null
                         processNextBook()

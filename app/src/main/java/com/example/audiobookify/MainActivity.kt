@@ -36,6 +36,8 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -129,6 +131,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AudioBookifyApp(viewModel: MainViewModel) {
     val context = LocalContext.current
@@ -200,30 +203,49 @@ fun AudioBookifyApp(viewModel: MainViewModel) {
         Toast.makeText(context, "Processing started in background", Toast.LENGTH_SHORT).show()
     }
 
-    AudioBookifyContent(
-        selectedBooks = selectedBooks,
-        outputDirUri = outputDirUri,
-        isProcessing = isProcessing,
-        onAddBooksClick = { filePickerLauncher.launch(arrayOf("*/*")) },
-        onSetOutputFolderClick = { dirPickerLauncher.launch(null) },
-        onStartProcessingClick = {
-            if (outputDirUri != null && selectedBooks.isNotEmpty()) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission) {
-                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    Scaffold(
+        modifier = modifier,
+        topBar = {
+            TopAppBar(
+                title = { Text("AudioBookify") },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            context.startActivity(Intent(context, SettingsActivity::class.java))
+                        }
+                    ) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        AudioBookifyContent(
+            modifier = Modifier.padding(paddingValues),
+            selectedBooks = selectedBooks,
+            outputDirUri = outputDirUri,
+            isProcessing = isProcessing,
+            onAddBooksClick = { filePickerLauncher.launch(arrayOf("*/*")) },
+            onSetOutputFolderClick = { dirPickerLauncher.launch(null) },
+            onStartProcessingClick = {
+                if (outputDirUri != null && selectedBooks.isNotEmpty()) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission) {
+                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        startProcessingService()
+                    }
                 } else {
-                    startProcessingService()
+                    val message = when {
+                        outputDirUri == null -> "Select output folder"
+                        selectedBooks.isEmpty() -> "Add some books"
+                        else -> "Unknown error"
+                    }
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                 }
-            } else {
-                val message = when {
-                    outputDirUri == null -> "Select output folder"
-                    selectedBooks.isEmpty() -> "Add some books"
-                    else -> "Unknown error"
-                }
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-            }
-        },
-        onCancelProcessingClick = { viewModel.cancelWork() }
-    )
+            },
+            onCancelProcessingClick = { viewModel.cancelWork() }
+        )
+    }
 }
 
 @Composable
@@ -247,13 +269,6 @@ fun AudioBookifyContent(
                 .navigationBarsPadding()
                 .padding(16.dp)
         ) {
-            Text(
-                text = "AudioBookify",
-                style = MaterialTheme.typography.headlineMedium
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
             Button(
                 onClick = onAddBooksClick,
                 modifier = Modifier.fillMaxWidth(),
@@ -302,27 +317,42 @@ fun AudioBookifyContent(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
     MaterialTheme {
-        var previewIsProcessing by remember { mutableStateOf(false) }
-        AudioBookifyContent(
-            selectedBooks = listOf(
-                Book("The Great Gatsby.epub", Uri.EMPTY),
-                Book("1984.txt", Uri.EMPTY),
-                Book("Pride and Prejudice.html", Uri.EMPTY)
-            ),
-            outputDirUri = null,
-            isProcessing = previewIsProcessing,
-            onAddBooksClick = {},
-            onSetOutputFolderClick = {},
-            onStartProcessingClick = {
-                previewIsProcessing = true
-            },
-            onCancelProcessingClick = {
-                previewIsProcessing = false
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("AudioBookify") },
+                    actions = {
+                        IconButton(onClick = {}) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        }
+                    }
+                )
             }
-        )
+        ) { paddingValues ->
+            var previewIsProcessing by remember { mutableStateOf(false) }
+            AudioBookifyContent(
+                modifier = Modifier.padding(paddingValues)
+                selectedBooks = listOf(
+                    Book("The Great Gatsby.epub", Uri.EMPTY),
+                    Book("1984.txt", Uri.EMPTY),
+                    Book("Pride and Prejudice.html", Uri.EMPTY)
+                ),
+                outputDirUri = null,
+                isProcessing = previewIsProcessing,
+                onAddBooksClick = {},
+                onSetOutputFolderClick = {},
+                onStartProcessingClick = {
+                    previewIsProcessing = true
+                },
+                onCancelProcessingClick = {
+                    previewIsProcessing = false
+                }
+            )
+        }
     }
 }
