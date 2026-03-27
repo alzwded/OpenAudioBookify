@@ -23,4 +23,4 @@
 - [ ] change domain from com.example.audiobookify to alzwded.openaudiobookify and rename project to OpenAudioBookify
 - [ ] rename theme from MyApplication to AudioBookify
 - [ ] Check cancel works
-- [ ] Add README.md
+- [x] Add README.md
