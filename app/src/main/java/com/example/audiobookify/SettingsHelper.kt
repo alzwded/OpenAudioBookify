@@ -35,6 +35,7 @@ class SettingsHelper(context: Context) {
         get() = prefs.getString("tts_engine", null)
         set(value) = prefs.edit().putString("tts_engine", value).apply()
 
+    // TODO dubious, should remove, selecting a voice should be enough
     var ttsLanguage: String?
         get() = prefs.getString("tts_language", null)
         set(value) = prefs.edit().putString("tts_language", value).apply()

@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import java.util.Locale
 
 // Simple Display Models for the UI
 data class TtsEngine(val id: String, val label: String)
@@ -118,7 +119,30 @@ class SettingsActivity : ComponentActivity() {
                     availableEngines.clear()
                     availableEngines.addAll(t.engines)
                     availableVoices.clear()
-                    t.voices?.let { availableVoices.addAll(it) }
+
+                    // reset voices, as they probably don't match across engines
+                    val voices = t.voices?.toList() ?: emptyList()
+                    availableVoices.addAll(voices)
+
+                    // Determine the best voice based on system locale
+                    val systemLocale = Locale.getDefault()
+
+                    val bestVoice = voices.find { it.locale == systemLocale } // Exact match
+                        ?: voices.find { it.locale.language == systemLocale.language } // Language match
+                        ?: voices.firstOrNull() // Absolute first fallback
+
+                    // Propagate to SettingsHelper and TTS Instance
+                    if (bestVoice != null) {
+                        settingsHelper.ttsVoice = bestVoice.name
+                        settingsHelper.ttsLanguage = bestVoice.locale.toLanguageTag()
+                        t.voice = bestVoice
+                    } else {
+                        // Reset to nothing if the engine is empty or invalid
+                        settingsHelper.ttsVoice = null
+                        settingsHelper.ttsLanguage = null
+                    }
+
+                    // flipping this from false to true triggers a re-render
                     isTtsReady.value = true
                 }
             }
@@ -246,7 +270,8 @@ fun SettingsScreenContent(
             ) {
                 OutlinedTextField(
                     // Display voice name alongside its friendly locale name
-                    value = voices.find { it.id == currentVoiceId }?.displayName ?: currentVoiceId,
+                    value = voices.find { it.id == currentVoiceId }?.displayName
+                        ?: if (voices.isEmpty()) "No voices available for this engine" else "Select a voice"
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("TTS Voice") },

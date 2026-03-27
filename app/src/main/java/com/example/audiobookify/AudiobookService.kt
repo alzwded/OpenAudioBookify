@@ -190,6 +190,16 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                 val targetVoice = tts?.voices?.find { it.name == voiceName }
                 if (targetVoice != null) {
                     tts?.voice = targetVoice
+                } else {
+                    val systemLocale = Locale.getDefault()
+
+                    val bestVoice = voices.find { it.locale == systemLocale } // Exact match
+                        ?: voices.find { it.locale.language == systemLocale.language } // Language match
+                        ?: voices.firstOrNull() // Absolute first fallback
+
+                    bestVoice?.let {
+                        tts?.voice = it
+                    }
                 }
             }
 
