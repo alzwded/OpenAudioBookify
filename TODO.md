@@ -22,5 +22,5 @@
 - [x] Add "about" info on the settings screen, like a new openaudiobookifyapp@gmail.com contact info, link to github etc; or maybe just stick it in the topbar
 - [x] Check cancel works
 - [x] Add README.md
+- [x] rename theme from MyApplication to AudioBookify
 - [ ] change domain from com.example.audiobookify to alzwded.openaudiobookify and rename project to OpenAudioBookify
-- [ ] rename theme from MyApplication to AudioBookify

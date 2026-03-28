@@ -75,7 +75,7 @@ fun Sequence<String>.batchByLength(maxLength: Int): Sequence<String> = sequence 
             }
         }
         if (currentBatch.isNotEmpty()) {
-            currentBatch.append("\n")
+            currentBatch.append("\n\n")
         }
         if (paragraph.length + 1 < maxLength) {
             currentBatch.append(paragraph)

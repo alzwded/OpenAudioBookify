@@ -17,13 +17,13 @@
         android:label="AudioBookify"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.MyApplication">
+        android:theme="@style/Theme.OpenAudioBookify">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="AudioBookify"
-            android:theme="@style/Theme.MyApplication">
+            android:theme="@style/Theme.OpenAudioBookify">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -34,13 +34,13 @@
             android:name=".SettingsActivity"
             android:exported="false"
             android:label="Settings"
-            android:theme="@style/Theme.MyApplication" />
+            android:theme="@style/Theme.OpenAudioBookify" />
 
         <activity
             android:name=".AboutActivity"
             android:exported="false"
             android:label="About"
-            android:theme="@style/Theme.MyApplication" />
+            android:theme="@style/Theme.OpenAudioBookify" />
 
         <service
             android:name=".AudiobookService"
