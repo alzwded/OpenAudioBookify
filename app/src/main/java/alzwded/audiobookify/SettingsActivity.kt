@@ -58,6 +58,9 @@ private val TAG = "SETTINGS_ACTIVITY";
 data class TtsEngine(val id: String, val label: String)
 data class TtsVoice(val id: String, val displayName: String)
 
+// Common model for our Searchable Dialog
+data class SelectionOption(val id: String, val label: String)
+
 class SettingsActivity : ComponentActivity() {
     private lateinit var settingsHelper: SettingsHelper
     private var tts: TextToSpeech? = null
@@ -258,6 +261,7 @@ fun SettingsScreenContent(
     onPlaySample: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showEngineSelection by remember { mutableStateOf(false) }
     var showVoiceSelection by remember { mutableStateOf(false) }
 
     Column(
@@ -271,34 +275,25 @@ fun SettingsScreenContent(
             Text("Initializing TTS Engine...", style = MaterialTheme.typography.bodyMedium)
             Spacer(modifier = Modifier.height(16.dp))
         } else {
-            // Engine Dropdown
-            var engineExpanded by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(
-                expanded = engineExpanded,
-                onExpandedChange = { engineExpanded = !engineExpanded }
-            ) {
+            // Engine Selector
+            Box(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = engines.find { it.id == currentEngineId }?.label ?: currentEngineId,
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("TTS Engine") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = engineExpanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showEngineSelection) },
+                    modifier = Modifier.fillMaxWidth()
                 )
-                ExposedDropdownMenu(
-                    expanded = engineExpanded,
-                    onDismissRequest = { engineExpanded = false }
-                ) {
-                    engines.forEach { engine ->
-                        DropdownMenuItem(
-                            text = { Text(engine.label) },
-                            onClick = {
-                                onEngineSelected(engine.id)
-                                engineExpanded = false
-                            }
-                        )
-                    }
-                }
+
+                // Invisible box to steal clicks
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable {
+                            if (engines.isNotEmpty()) showEngineSelection = true
+                        }
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -375,11 +370,30 @@ fun SettingsScreenContent(
         )
     }
 
+    // Engine Selection Dialog
+    if (showEngineSelection) {
+        val engineOptions = engines.map { SelectionOption(it.id, it.label) }
+        SearchableSelectionDialog(
+            title = "Select Engine",
+            searchLabel = "Search engines",
+            options = engineOptions,
+            onDismissRequest = { showEngineSelection = false },
+            onOptionSelected = {
+                onEngineSelected(it)
+                showEngineSelection = false
+            }
+        )
+    }
+
+    // Voice Selection Dialog
     if (showVoiceSelection) {
-        VoiceSelectionDialog(
-            voices = voices,
+        val voiceOptions = voices.map { SelectionOption(it.id, it.displayName) }
+        SearchableSelectionDialog(
+            title = "Select Voice",
+            searchLabel = "Search voices",
+            options = voiceOptions,
             onDismissRequest = { showVoiceSelection = false },
-            onVoiceSelected = {
+            onOptionSelected = {
                 onVoiceSelected(it)
                 showVoiceSelection = false
             }
@@ -389,16 +403,18 @@ fun SettingsScreenContent(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun VoiceSelectionDialog(
-    voices: List<TtsVoice>,
+fun SearchableSelectionDialog(
+    title: String,
+    searchLabel: String,
+    options: List<SelectionOption>,
     onDismissRequest: () -> Unit,
-    onVoiceSelected: (String) -> Unit
+    onOptionSelected: (String) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
     
-    // Filter voices based on search query dynamically
-    val filteredVoices = remember(searchQuery, voices) {
-        voices.filter { it.displayName.contains(searchQuery, ignoreCase = true) }
+    // Filter options based on search query dynamically
+    val filteredOptions = remember(searchQuery, options) {
+        options.filter { it.label.contains(searchQuery, ignoreCase = true) }
     }
 
     Dialog(
@@ -414,7 +430,7 @@ fun VoiceSelectionDialog(
         ) {
             Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                 Text(
-                    text = "Select Voice", 
+                    text = title,
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
@@ -423,27 +439,27 @@ fun VoiceSelectionDialog(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Search voices") },
+                    label = { Text(searchLabel) },
                     singleLine = true
                 )
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 LazyColumn(modifier = Modifier.weight(1f)) {
-                    items(filteredVoices, key = { it.id }) { voice ->
+                    items(filteredOptions, key = { it.id }) { option ->
                         Text(
-                            text = voice.displayName,
+                            text = option.label,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onVoiceSelected(voice.id) }
+                                .clickable { onOptionSelected(option.id) }
                                 .padding(vertical = 16.dp, horizontal = 8.dp),
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
-                    if (filteredVoices.isEmpty()) {
+                    if (filteredOptions.isEmpty()) {
                         item {
                             Text(
-                                text = "No voices found",
+                                text = "No options found",
                                 modifier = Modifier.padding(16.dp),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -466,16 +482,18 @@ fun VoiceSelectionDialog(
 
 @Preview(showBackground = true)
 @Composable
-fun VoiceSelectionDialogPreview() {
+fun SelectionDialogPreview() {
 	MaterialTheme {
-        VoiceSelectionDialog(
-            voices = listOf(
-                TtsVoice("en-us-x-sfg", "English (US) - Voice I"),
-                TtsVoice("en-us-x-ntk", "English (US) - Voice II"),
-                TtsVoice("en-gb-x-fis", "English (UK) - Voice III")
+        SearchableSelectionDialog(
+			title = "Select Voice",
+			searchLabel = "Search voices",
+            options = listOf(
+                SelectionOption("en-us-x-sfg", "en-us-x-sfg - English (United States) local"),
+                SelectionOption("en-us-x-ntk", "en-us-x-ntk - English (United States) network"),
+                SelectionOption("en-gb-x-fis", "en-gb-x-fis - English (United Kingdom) local")
             ),
             onDismissRequest = { },
-            onVoiceSelected = { }
+            onOptionSelected = { }
         )
 	}
 }
