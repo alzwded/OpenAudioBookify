@@ -130,7 +130,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            MaterialTheme {
+            OpenAudioBookifyTheme {
                 val viewModel: MainViewModel = viewModel()
                 OpenAudioBookifyApp(viewModel = viewModel)
             }
@@ -373,16 +373,11 @@ fun OpenAudioBookifyContent(
     }
 }
 
-@Preview(name = "Galaxy S24 Ultra", device = "spec:width=1440px,height=3120px,dpi=500", showBackground = true)
-@Preview(name = "7 inch Tablet", device = "spec:width=1200px,height=1920px,dpi=320", showBackground = true)
-@Preview(name = "10 inch Tablet", device = "spec:width=2560px,height=1600px,dpi=320", showBackground = true)
-annotation class DevicesPreview
-
 @OptIn(ExperimentalMaterial3Api::class)
 @DevicesPreview
 @Composable
 fun DefaultPreview() {
-    MaterialTheme {
+    OpenAudioBookifyTheme {
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -426,7 +421,7 @@ fun DefaultPreview() {
 @DevicesPreview
 @Composable
 fun IsProcessingPreview() {
-    MaterialTheme {
+    OpenAudioBookifyTheme {
         Scaffold(
             topBar = {
                 TopAppBar(

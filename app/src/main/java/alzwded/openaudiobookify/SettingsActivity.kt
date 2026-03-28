@@ -84,7 +84,7 @@ class SettingsActivity : ComponentActivity() {
         initTts(settingsHelper.ttsEngine)
 
         setContent {
-            MaterialTheme {
+            OpenAudioBookifyTheme {
                 Scaffold(
                     topBar = {
                         @OptIn(ExperimentalMaterial3Api::class)
@@ -483,7 +483,7 @@ fun SearchableSelectionDialog(
 @DevicesPreview
 @Composable
 fun SelectionDialogPreview() {
-	MaterialTheme {
+	OpenAudioBookifyTheme {
         SearchableSelectionDialog(
 			title = "Select Voice",
 			searchLabel = "Search voices",
@@ -501,7 +501,7 @@ fun SelectionDialogPreview() {
 @DevicesPreview
 @Composable
 fun SettingsDefaultPreview() {
-    MaterialTheme {
+    OpenAudioBookifyTheme {
         Scaffold(
             topBar = {
                 @OptIn(ExperimentalMaterial3Api::class)

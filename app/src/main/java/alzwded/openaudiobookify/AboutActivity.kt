@@ -39,7 +39,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 class AboutActivity : ComponentActivity() {
@@ -47,7 +46,7 @@ class AboutActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MaterialTheme {
+            OpenAudioBookifyTheme {
                 AboutScreen(onBackClick = { finish() })
             }
         }
@@ -137,7 +136,7 @@ fun AboutScreen(onBackClick: () -> Unit) {
 @DevicesPreview
 @Composable
 fun AboutDefaultPreview() {
-    MaterialTheme {
+    OpenAudioBookifyTheme {
         AboutScreen(onBackClick = {})
     }
 }
