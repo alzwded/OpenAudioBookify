@@ -90,9 +90,8 @@ fun ballparkHtmlChunks(htmlContent: String): Sequence<String> = sequence {
 
                         // when done, check what we were, and issue some relevant whitespace
                         when (tag) {
-                            "table", "ol", "ul", "dl", "dd", "dt", "li", "tr", "thead" -> yield("\n\n")
+                            "table", "ol", "ul", "dl", "dd", "dt", "li", "tr", "thead", "td", "th" -> yield("\n\n")
                             "p" -> yield("\n")
-                            "td", "th" -> yield(" ")
                             else -> if (node.isBlock) yield(" ")
                         }
                     } // else
