@@ -23,7 +23,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package com.example.audiobookify
+package alzwded.audiobookify
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -62,7 +62,7 @@ fun AboutScreen(onBackClick: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("About AudioBookify") },
+                title = { Text("About OpenAudioBookify") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

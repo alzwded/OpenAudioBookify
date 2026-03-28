@@ -23,7 +23,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package com.example.audiobookify
+package alzwded.audiobookify
 
 import android.Manifest
 import android.app.Application
@@ -132,7 +132,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 val viewModel: MainViewModel = viewModel()
-                AudioBookifyApp(viewModel = viewModel)
+                OpenAudioBookifyApp(viewModel = viewModel)
             }
         }
     }
@@ -140,7 +140,7 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AudioBookifyApp(viewModel: MainViewModel) {
+fun OpenAudioBookifyApp(viewModel: MainViewModel) {
     val context = LocalContext.current
     var selectedBooks by remember { mutableStateOf<List<Book>>(emptyList()) }
     var outputDirUri by remember { mutableStateOf<Uri?>(null) }
@@ -214,7 +214,7 @@ fun AudioBookifyApp(viewModel: MainViewModel) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("AudioBookify") },
+                title = { Text("OpenAudioBookify") },
                 actions = {
                     IconButton(
                         onClick = {
@@ -234,7 +234,7 @@ fun AudioBookifyApp(viewModel: MainViewModel) {
             )
         }
     ) { paddingValues ->
-        AudioBookifyContent(
+        OpenAudioBookifyContent(
             modifier = Modifier.padding(paddingValues),
             selectedBooks = selectedBooks,
             outputDirUri = outputDirUri,
@@ -265,7 +265,7 @@ fun AudioBookifyApp(viewModel: MainViewModel) {
 }
 
 @Composable
-fun AudioBookifyContent(
+fun OpenAudioBookifyContent(
     modifier: Modifier = Modifier,
     selectedBooks: List<Book>,
     outputDirUri: Uri?,
@@ -381,7 +381,7 @@ fun DefaultPreview() {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("AudioBookify") },
+                    title = { Text("OpenAudioBookify") },
                     actions = {
                         IconButton(onClick = {}) {
                             Icon(Icons.Default.Info, contentDescription = "About")
@@ -393,7 +393,7 @@ fun DefaultPreview() {
                 )
             }
         ) { paddingValues ->
-            AudioBookifyContent(
+            OpenAudioBookifyContent(
                 modifier = Modifier.padding(paddingValues),
                 selectedBooks = listOf(
                     Book("The Great Gatsby.epub", Uri.EMPTY),
@@ -425,7 +425,7 @@ fun IsProcessingPreview() {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("AudioBookify") },
+                    title = { Text("OpenAudioBookify") },
                     actions = {
                         IconButton(onClick = {}) {
                             Icon(Icons.Default.Info, contentDescription = "About")
@@ -437,7 +437,7 @@ fun IsProcessingPreview() {
                 )
             }
         ) { paddingValues ->
-            AudioBookifyContent(
+            OpenAudioBookifyContent(
                 modifier = Modifier.padding(paddingValues),
                 selectedBooks = listOf(
                     Book("The Great Gatsby.epub", Uri.EMPTY),

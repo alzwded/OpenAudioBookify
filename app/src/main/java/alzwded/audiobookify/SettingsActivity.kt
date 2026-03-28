@@ -23,7 +23,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package com.example.audiobookify
+package alzwded.audiobookify
 
 import android.os.Bundle
 import android.speech.tts.TextToSpeech

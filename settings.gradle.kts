@@ -23,5 +23,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AudioBookify"
+rootProject.name = "OpenAudioBookify"
 include(":app")

@@ -23,7 +23,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package com.example.audiobookify
+package alzwded.audiobookify
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -313,7 +313,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
     private fun showCompletionNotification() {
         val manager = getSystemService(NotificationManager::class.java)
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Audiobook Generator")
+            .setContentTitle("OpenAudioBookify")
             .setContentText("All audiobooks generated successfully.")
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setAutoCancel(true)
@@ -338,7 +338,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Audiobook Generator")
+            .setContentTitle("OpenAudioBookify")
             .setContentText(statusText)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setOngoing(true)
