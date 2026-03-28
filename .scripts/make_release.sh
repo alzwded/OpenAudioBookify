@@ -40,6 +40,7 @@ mkdir -p dist
 cp $OFILE ./dist
 pushd ./dist
 shasum -a 256 app-release.apk > app-release.apk.sha256
+popd
 
 echo '===='
 echo 'Done'
