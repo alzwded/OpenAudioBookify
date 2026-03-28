@@ -139,7 +139,7 @@ fun Sequence<String>.chunkByPunctuation(): Sequence<String> = sequence {
     }
 
     // 3. Fallback: yield any remaining text in the buffer once the generator is empty
-    val finalChunk = buffer.trim()
+    val finalChunk = buffer.toString().trim()
     if (finalChunk.isNotEmpty()) {
         yield(finalChunk)
     }

@@ -35,6 +35,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -89,7 +91,7 @@ class SettingsActivity : ComponentActivity() {
                             settingsHelper.ttsEngine = engineId
                             isTtsReady.value = false
                             initTts(engineId)
-                        }
+                        },
                         onVoiceSelected = { voiceId ->
                             // Find the actual Voice object by ID
                             val voiceObj = availableVoices.find { it.name == voiceId }
@@ -278,7 +280,7 @@ fun SettingsScreenContent(
                 OutlinedTextField(
                     // Display voice name alongside its friendly locale name
                     value = voices.find { it.id == currentVoiceId }?.displayName
-                        ?: if (voices.isEmpty()) "No voices available for this engine" else "Select a voice"
+                        ?: if (voices.isEmpty()) "No voices available for this engine" else "Select a voice",
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("TTS Voice") },
@@ -325,7 +327,7 @@ fun SettingsScreenContent(
         }
         Slider(
             value = pitch,
-            onValueChange = onPitchChange
+            onValueChange = onPitchChange,
             valueRange = 0.25f..2.0f
         )
 
@@ -359,7 +361,7 @@ fun SettingsDefaultPreview() {
             topBar = {
                 @OptIn(ExperimentalMaterial3Api::class)
                 TopAppBar(
-                    title = { Text("Settings") }
+                    title = { Text("Settings") },
                     navigationIcon = {
                         IconButton(onClick = {}) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

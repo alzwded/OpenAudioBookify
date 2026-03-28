@@ -6,10 +6,10 @@
  * modification, are permitted provided that the following conditions are met:
  *
  * 1. Redistributions of source code must retain the above copyright notice, this
- * list of conditions and the following disclaimer.
+ *    list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -36,9 +36,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Settings
 import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -49,11 +46,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -214,7 +210,6 @@ fun AudioBookifyApp(viewModel: MainViewModel) {
     }
 
     Scaffold(
-        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text("AudioBookify") },
@@ -242,6 +237,7 @@ fun AudioBookifyApp(viewModel: MainViewModel) {
             selectedBooks = selectedBooks,
             outputDirUri = outputDirUri,
             isProcessing = isProcessing,
+            queueState = queueState,
             onAddBooksClick = { filePickerLauncher.launch(arrayOf("*/*")) },
             onSetOutputFolderClick = { dirPickerLauncher.launch(null) },
             onStartProcessingClick = {
@@ -267,23 +263,23 @@ fun AudioBookifyApp(viewModel: MainViewModel) {
 
 @Composable
 fun AudioBookifyContent(
+    modifier: Modifier = Modifier,
     selectedBooks: List<Book>,
     outputDirUri: Uri?,
     isProcessing: Boolean,
+    queueState: List<BookState>,
     onAddBooksClick: () -> Unit,
     onSetOutputFolderClick: () -> Unit,
     onStartProcessingClick: () -> Unit,
     onCancelProcessingClick: () -> Unit
 ) {
     Surface(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
                 .padding(16.dp)
         ) {
             Button(
@@ -369,7 +365,7 @@ fun DefaultPreview() {
                     title = { Text("AudioBookify") },
                     actions = {
                         IconButton(onClick = {}) {
-                            Icon(Icons.Default.Settings, contentDescription = "About")
+                            Icon(Icons.Default.Info, contentDescription = "About")
                         }
                         IconButton(onClick = {}) {
                             Icon(Icons.Default.Settings, contentDescription = "Settings")
@@ -378,29 +374,67 @@ fun DefaultPreview() {
                 )
             }
         ) { paddingValues ->
-            var previewIsProcessing by remember { mutableStateOf(false) }
             AudioBookifyContent(
-                modifier = Modifier.padding(paddingValues)
+                modifier = Modifier.padding(paddingValues),
                 selectedBooks = listOf(
                     Book("The Great Gatsby.epub", Uri.EMPTY),
                     Book("1984.txt", Uri.EMPTY),
                     Book("Pride and Prejudice.html", Uri.EMPTY)
                 ),
                 outputDirUri = null,
-                isProcessing = previewIsProcessing,
+                isProcessing = false,
                 queueState = listOf(
                     BookState(Uri.EMPTY, "The Great Gatsby.epub", BookStatus.FINISHED, 8960),
-                    BookState(Uri.EMPTY, "1984.txt", BookState.PROCESSING, 42),
-                    BookState(Uri.EMPTY, "Pride and Prejudice.html", BookState.QUEUED, 0)
+                    BookState(Uri.EMPTY, "1984.txt", BookStatus.PROCESSING, 42),
+                    BookState(Uri.EMPTY, "Pride and Prejudice.html", BookStatus.QUEUED, 0)
                 ),
                 onAddBooksClick = {},
                 onSetOutputFolderClick = {},
-                onStartProcessingClick = {
-                    previewIsProcessing = true
-                },
-                onCancelProcessingClick = {
-                    previewIsProcessing = false
-                }
+                onStartProcessingClick = {},
+                onCancelProcessingClick = {}
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true)
+@Composable
+fun IsProcessingPreview() {
+    MaterialTheme {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("AudioBookify") },
+                    actions = {
+                        IconButton(onClick = {}) {
+                            Icon(Icons.Default.Info, contentDescription = "About")
+                        }
+                        IconButton(onClick = {}) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        }
+                    }
+                )
+            }
+        ) { paddingValues ->
+            AudioBookifyContent(
+                modifier = Modifier.padding(paddingValues),
+                selectedBooks = listOf(
+                    Book("The Great Gatsby.epub", Uri.EMPTY),
+                    Book("1984.txt", Uri.EMPTY),
+                    Book("Pride and Prejudice.html", Uri.EMPTY)
+                ),
+                outputDirUri = null,
+                isProcessing = true,
+                queueState = listOf(
+                    BookState(Uri.EMPTY, "The Great Gatsby.epub", BookStatus.FINISHED, 8960),
+                    BookState(Uri.EMPTY, "1984.txt", BookStatus.PROCESSING, 42),
+                    BookState(Uri.EMPTY, "Pride and Prejudice.html", BookStatus.QUEUED, 0)
+                ),
+                onAddBooksClick = {},
+                onSetOutputFolderClick = {},
+                onStartProcessingClick = {},
+                onCancelProcessingClick = {}
             )
         }
     }

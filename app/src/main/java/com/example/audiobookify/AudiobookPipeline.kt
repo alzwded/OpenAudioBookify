@@ -210,7 +210,12 @@ class AudiobookPipeline(
                 }
             }
 
-            override fun onError(utteranceId: String?, errorCode: int) {
+            @Deprecated("Deprecated in Java")
+            override fun onError(p0: String?) {
+                this.onError(p0 ?: "unknown", 0);
+            }
+
+            override fun onError(utteranceId: String, errorCode: Int) {
                 Log.e(TAG, "TTS Error on chunk $chunkIndex: $errorCode")
             }
         })

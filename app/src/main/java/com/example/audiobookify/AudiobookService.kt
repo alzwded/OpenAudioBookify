@@ -41,6 +41,7 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.Voice
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -55,6 +56,7 @@ data class BookState(
     val status: BookStatus,
     val currentChunk: Int = 0)
 
+@UnstableApi
 class AudiobookService : Service(), TextToSpeech.OnInitListener {
 
     companion object {
@@ -75,7 +77,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
     private val _isProcessing = MutableStateFlow(false)
     val isProcessing = _isProcessing.asStateFlow()
 
-    private val _queueStatus = MutableStateFlow<List<BookState>>(emptyList())
+    private val _queueState = MutableStateFlow<List<BookState>>(emptyList())
     val queueState = _queueState.asStateFlow()
     // -------------------------------
 
@@ -153,10 +155,11 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                                 }
                             }
                         }
-                        BookState(uri, bookName, BooStatus.QUEUED, 0)
+                        BookState(uri, bookName, BookStatus.QUEUED, 0)
                     }
 
                     bookQueue.addAll(uris)
+                    _queueState.value += newBooks
 
                     if (tts == null) {
                         tts = TextToSpeech(this, this, settingsHelper.ttsEngine)
@@ -186,8 +189,9 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                 tts?.language = Locale.getDefault()
             }
 
-            settingsHelper.ttsVoice?.let { voiceName ->
-                val targetVoice = tts?.voices?.find { it.name == voiceName }
+            settingsHelper.ttsVoice?.let { voiceName: String ->
+                val voices = tts?.voices ?: emptySet<Voice>()
+                val targetVoice = voices.find { it.name == voiceName }
                 if (targetVoice != null) {
                     tts?.voice = targetVoice
                 } else {
