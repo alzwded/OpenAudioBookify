@@ -32,7 +32,10 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -40,10 +43,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import java.util.Locale
 
 private val TAG = "SETTINGS_ACTIVITY";
@@ -252,6 +258,8 @@ fun SettingsScreenContent(
     onPlaySample: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showVoiceSelection by remember { mutableStateOf(false) }
+
     Column(
         modifier = modifier
             .padding(16.dp)
@@ -295,12 +303,8 @@ fun SettingsScreenContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Voice Dropdown
-            var voiceExpanded by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(
-                expanded = voiceExpanded,
-                onExpandedChange = { voiceExpanded = !voiceExpanded }
-            ) {
+            // Voice Selector (Opens a Searchable Dialog instead of a Dropdown)
+            Box(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     // Display voice name alongside its friendly locale name
                     value = voices.find { it.id == currentVoiceId }?.displayName
@@ -308,23 +312,18 @@ fun SettingsScreenContent(
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("TTS Voice") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = voiceExpanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showVoiceSelection) },
+                    modifier = Modifier.fillMaxWidth()
                 )
-                ExposedDropdownMenu(
-                    expanded = voiceExpanded,
-                    onDismissRequest = { voiceExpanded = false }
-                ) {
-                    voices.forEach { voice ->
-                        DropdownMenuItem(
-                            text = { Text(voice.displayName) },
-                            onClick = {
-                                onVoiceSelected(voice.id)
-                                voiceExpanded = false
-                            }
-                        )
-                    }
-                }
+
+                // Invisible box to steal clicks so the keyboard doesn't open
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable {
+                            if (voices.isNotEmpty()) showVoiceSelection = true
+                        }
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -375,6 +374,110 @@ fun SettingsScreenContent(
             modifier = Modifier.fillMaxWidth()
         )
     }
+
+    if (showVoiceSelection) {
+        VoiceSelectionDialog(
+            voices = voices,
+            onDismissRequest = { showVoiceSelection = false },
+            onVoiceSelected = {
+                onVoiceSelected(it)
+                showVoiceSelection = false
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun VoiceSelectionDialog(
+    voices: List<TtsVoice>,
+    onDismissRequest: () -> Unit,
+    onVoiceSelected: (String) -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    
+    // Filter voices based on search query dynamically
+    val filteredVoices = remember(searchQuery, voices) {
+        voices.filter { it.displayName.contains(searchQuery, ignoreCase = true) }
+    }
+
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = false) // Allow scaling closer to screen edges
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .fillMaxHeight(0.8f),
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                Text(
+                    text = "Select Voice", 
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Search voices") },
+                    singleLine = true
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(filteredVoices, key = { it.id }) { voice ->
+                        Text(
+                            text = voice.displayName,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onVoiceSelected(voice.id) }
+                                .padding(vertical = 16.dp, horizontal = 8.dp),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                    if (filteredVoices.isEmpty()) {
+                        item {
+                            Text(
+                                text = "No voices found",
+                                modifier = Modifier.padding(16.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                TextButton(
+                    onClick = onDismissRequest,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text("Cancel")
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun VoiceSelectionDialogPreview() {
+	MaterialTheme {
+        VoiceSelectionDialog(
+            voices = listOf(
+                TtsVoice("en-us-x-sfg", "English (US) - Voice I"),
+                TtsVoice("en-us-x-ntk", "English (US) - Voice II"),
+                TtsVoice("en-gb-x-fis", "English (UK) - Voice III")
+            ),
+            onDismissRequest = { },
+            onVoiceSelected = { }
+        )
+	}
 }
 
 @Preview(showBackground = true)
