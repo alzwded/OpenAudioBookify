@@ -6,7 +6,7 @@ OUTPUT_DIR="app/src/main/res"
 declare -a BASE_NAMES=("ic_launcher" "ic_launcher_round" "ic_launcher_foreground_image")
 
 if [ -z "$INPUT_IMAGE" ]; then
-    echo "Usage: ./generate_icons.sh <path_to_high_res_image>"
+    echo "Usage: ./.scripts/generate_icons.sh <path_to_high_res_image>"
     exit 1
 fi
 

@@ -49,3 +49,6 @@ Thumbs.db
 
 # Profiler
 *.hprof
+
+app/release
+dist
