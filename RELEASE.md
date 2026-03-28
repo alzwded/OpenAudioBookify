@@ -18,4 +18,6 @@ Release
   shasum -a 256 app/build/outputs/apk/release/app-release.apk > app/build/outputs/apk/release/app-release.apk.sha256
   ```
 - tag to `v${versionName}`
-- create release with latest release notes.
+- create release:
+  + latest release notes + sha256 of app-release.apk
+  + attach app-release.apk
