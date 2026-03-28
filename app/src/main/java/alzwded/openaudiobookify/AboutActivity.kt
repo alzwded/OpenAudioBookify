@@ -134,7 +134,7 @@ fun AboutScreen(onBackClick: () -> Unit) {
     }
 }
 
-@Preview(showBackground = true)
+@DevicesPreview
 @Composable
 fun AboutDefaultPreview() {
     MaterialTheme {

@@ -480,7 +480,7 @@ fun SearchableSelectionDialog(
     }
 }
 
-@Preview(showBackground = true)
+@DevicesPreview
 @Composable
 fun SelectionDialogPreview() {
 	MaterialTheme {
@@ -498,7 +498,7 @@ fun SelectionDialogPreview() {
 	}
 }
 
-@Preview(showBackground = true)
+@DevicesPreview
 @Composable
 fun SettingsDefaultPreview() {
     MaterialTheme {

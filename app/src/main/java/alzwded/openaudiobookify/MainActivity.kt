@@ -373,8 +373,13 @@ fun OpenAudioBookifyContent(
     }
 }
 
+@Preview(name = "Galaxy S24 Ultra", device = "spec:width=1440px,height=3120px,dpi=500", showBackground = true)
+@Preview(name = "7 inch Tablet", device = "spec:width=1200px,height=1920px,dpi=320", showBackground = true)
+@Preview(name = "10 inch Tablet", device = "spec:width=2560px,height=1600px,dpi=320", showBackground = true)
+annotation class DevicesPreview
+
 @OptIn(ExperimentalMaterial3Api::class)
-@Preview(showBackground = true)
+@DevicesPreview
 @Composable
 fun DefaultPreview() {
     MaterialTheme {
@@ -418,7 +423,7 @@ fun DefaultPreview() {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Preview(showBackground = true)
+@DevicesPreview
 @Composable
 fun IsProcessingPreview() {
     MaterialTheme {
