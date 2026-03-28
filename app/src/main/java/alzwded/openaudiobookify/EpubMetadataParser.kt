@@ -23,7 +23,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package alzwded.audiobookify
+package alzwded.openaudiobookify
 
 import org.w3c.dom.Element
 import java.io.File

@@ -19,4 +19,4 @@ License
 
 This project is licensed under a permissive [BSD License](./LICENSE).
 
-This project lives at https://github.com/alzwded/AudioBookify
+This project lives at https://github.com/alzwded/OpenAudioBookify

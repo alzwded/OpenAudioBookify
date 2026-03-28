@@ -23,7 +23,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package alzwded.audiobookify
+package alzwded.openaudiobookify
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -81,7 +81,7 @@ fun AboutScreen(onBackClick: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
             
             Button(
-                onClick = { uriHandler.openUri("https://github.com/alzwded/AudioBookify") },
+                onClick = { uriHandler.openUri("https://github.com/alzwded/OpenAudioBookify") },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("GitHub Repository")

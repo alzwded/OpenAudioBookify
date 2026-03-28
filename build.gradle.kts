@@ -4,3 +4,4 @@ plugins {
     alias(libs.plugins.kotlinAndroid) apply false
     alias(libs.plugins.kotlinCompose) apply false
 }
+val defaultApplicationId by extra("alzwded.openaudiobookify")

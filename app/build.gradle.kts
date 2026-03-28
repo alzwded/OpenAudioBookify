@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "alzwded.audiobookify"
+    namespace = "alzwded.openaudiobookify"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "alzwded.audiobookify"
+        applicationId = "alzwded.openaudiobookify"
         minSdk = 24
         targetSdk = 35
         versionCode = 1

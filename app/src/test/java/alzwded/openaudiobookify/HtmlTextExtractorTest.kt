@@ -23,7 +23,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package alzwded.audiobookify
+package alzwded.openaudiobookify
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

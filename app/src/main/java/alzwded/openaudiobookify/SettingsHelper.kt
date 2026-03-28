@@ -23,13 +23,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package alzwded.audiobookify
+package alzwded.openaudiobookify
 
 import android.content.Context
 import android.content.SharedPreferences
 
 class SettingsHelper(context: Context) {
-    private val prefs: SharedPreferences = context.getSharedPreferences("audiobookify_settings", Context.MODE_PRIVATE)
+    private val prefs: SharedPreferences = context.getSharedPreferences("openaudiobookify_settings", Context.MODE_PRIVATE)
 
     var ttsEngine: String?
         get() = prefs.getString("tts_engine", null)

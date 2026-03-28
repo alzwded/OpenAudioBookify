@@ -53,7 +53,7 @@
 // Then, perhaps populate metadata?
 
 
-package alzwded.audiobookify
+package alzwded.openaudiobookify
 
 import android.content.Context
 import android.net.Uri
