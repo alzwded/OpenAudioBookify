@@ -14,15 +14,15 @@ You probably first want to hit the gear wheel in the top right and tweak your TT
 
 You can also tweak the compressed output audio bitrate from the default 48kbps (which is about the lower limit before voices start to sound like underwater snakes).
 
-![settings screen](./screenshots/Settings--readme.jpg)
+![settings screen](./screenshots/Settings--readme.png)
 
 At this point, you can select some books, select an output folder, and click "Start Processing".
 
-![main activity, idle state](./screenshots/Main--readme.jpg)
+![main activity, idle state](./screenshots/Main--readme.png)
 
 You can return to the app periodically to see what it's doing, or stop it.
 
-![main activity, rendering state](./screenshots/Main-Processing--readme.jpg)
+![main activity, rendering state](./screenshots/Main-Processing--readme.png)
 
 You will get a notification when it's done.
 
