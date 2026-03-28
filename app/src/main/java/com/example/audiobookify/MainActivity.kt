@@ -47,10 +47,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
@@ -239,6 +241,7 @@ fun AudioBookifyApp(viewModel: MainViewModel) {
             isProcessing = isProcessing,
             queueState = queueState,
             onAddBooksClick = { filePickerLauncher.launch(arrayOf("*/*")) },
+            onClearBooksClick = { selectedBooks = emptyList() },
             onSetOutputFolderClick = { dirPickerLauncher.launch(null) },
             onStartProcessingClick = {
                 if (outputDirUri != null && selectedBooks.isNotEmpty()) {
@@ -269,6 +272,7 @@ fun AudioBookifyContent(
     isProcessing: Boolean,
     queueState: List<BookState>,
     onAddBooksClick: () -> Unit,
+    onClearBooksClick: () -> Unit,
     onSetOutputFolderClick: () -> Unit,
     onStartProcessingClick: () -> Unit,
     onCancelProcessingClick: () -> Unit
@@ -282,12 +286,27 @@ fun AudioBookifyContent(
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            Button(
-                onClick = onAddBooksClick,
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !isProcessing // Disable while processing
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Add Books (TXT, EPUB, etc.)")
+                Button(
+                    onClick = onAddBooksClick,
+                    modifier = Modifier.weight(1f),
+                    enabled = !isProcessing // Disable while processing
+                ) {
+                    Text("Add Books (TXT, EPUB, etc.)")
+                }
+
+                if (selectedBooks.isNotEmpty()) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(
+                        onClick = onClearBooksClick,
+                        enabled = !isProcessing
+                    ) {
+                        Icon(Icons.Default.Close, contentDescription = "Clear Books")
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -389,6 +408,7 @@ fun DefaultPreview() {
                     BookState(Uri.EMPTY, "Pride and Prejudice.html", BookStatus.QUEUED, 0)
                 ),
                 onAddBooksClick = {},
+                onClearBooksClick = {},
                 onSetOutputFolderClick = {},
                 onStartProcessingClick = {},
                 onCancelProcessingClick = {}
@@ -432,6 +452,7 @@ fun IsProcessingPreview() {
                     BookState(Uri.EMPTY, "Pride and Prejudice.html", BookStatus.QUEUED, 0)
                 ),
                 onAddBooksClick = {},
+                onClearBooksClick = {},
                 onSetOutputFolderClick = {},
                 onStartProcessingClick = {},
                 onCancelProcessingClick = {}

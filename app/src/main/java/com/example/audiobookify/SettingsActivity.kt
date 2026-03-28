@@ -28,6 +28,7 @@ package com.example.audiobookify
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.Voice
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -45,6 +46,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import java.util.Locale
 
+private val TAG = "SETTINGS_ACTIVITY";
+
 // Simple Display Models for the UI
 data class TtsEngine(val id: String, val label: String)
 data class TtsVoice(val id: String, val displayName: String)
@@ -57,11 +60,16 @@ class SettingsActivity : ComponentActivity() {
     private var availableEngines = mutableStateListOf<TextToSpeech.EngineInfo>()
     private var availableVoices = mutableStateListOf<Voice>()
     private var isTtsReady = mutableStateOf(false)
+    private var currentEngineId = mutableStateOf<String?>(null)
+    private var currentVoiceId = mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         settingsHelper = SettingsHelper(this)
+        
+        currentEngineId.value = settingsHelper.ttsEngine
+        currentVoiceId.value = settingsHelper.ttsVoice
 
         // Initialize TTS with the saved engine, or default if null
         initTts(settingsHelper.ttsEngine)
@@ -86,17 +94,23 @@ class SettingsActivity : ComponentActivity() {
                         isTtsReady = isTtsReady.value,
                         engines = availableEngines,
                         voices = availableVoices,
+                        currentEngineId = currentEngineId.value ?: "",
+                        currentVoiceId = currentVoiceId.value ?: "",
                         onEngineSelected = { engineId ->
                             // When engine changes, save it and re-initialize to fetch its specific voices
                             settingsHelper.ttsEngine = engineId
+                            currentEngineId.value = engineId
                             isTtsReady.value = false
                             initTts(engineId)
                         },
                         onVoiceSelected = { voiceId ->
                             // Find the actual Voice object by ID
                             val voiceObj = availableVoices.find { it.name == voiceId }
+                            Log.d(TAG, "looking for ${voiceId}, found ${voiceObj?.name ?: "<null>"}")
                             voiceObj?.let {
+                                Log.d("TTS", "selected ${it.name}")
                                 settingsHelper.ttsVoice = it.name
+                                currentVoiceId.value = it.name
                                 settingsHelper.ttsLanguage = it.locale.toLanguageTag()
                                 tts?.voice = it
                             }
@@ -106,7 +120,7 @@ class SettingsActivity : ComponentActivity() {
                                 t.setSpeechRate(settingsHelper.speechRate)
                                 t.setPitch(settingsHelper.pitch)
                                 t.speak(
-                                    "This is a sample of the current voice and speed settings.",
+                                    "1, 2, 3, 4, 12345678.",
                                     TextToSpeech.QUEUE_FLUSH,
                                     null,
                                     "sample_id"
@@ -128,26 +142,34 @@ class SettingsActivity : ComponentActivity() {
                     availableEngines.clear()
                     availableEngines.addAll(t.engines)
                     availableVoices.clear()
+                    
+                    if (currentEngineId.value == null) {
+                        currentEngineId.value = t.defaultEngine
+                    }
 
                     // reset voices, as they probably don't match across engines
-                    val voices = t.voices?.toList() ?: emptyList()
+                    val voices = t.voices?.toList()?.sortedBy { it.name } ?: emptyList()
                     availableVoices.addAll(voices)
 
                     // Determine the best voice based on system locale
                     val systemLocale = Locale.getDefault()
 
-                    val bestVoice = voices.find { it.locale == systemLocale } // Exact match
+                    val bestVoice =
+                        currentVoiceId?.value?.let { voiceId -> voices.find { it.name == voiceId } } // restore voice from settings bundle
+                        ?: voices.find { it.locale == systemLocale } // Exact match
                         ?: voices.find { it.locale.language == systemLocale.language } // Language match
                         ?: voices.firstOrNull() // Absolute first fallback
 
                     // Propagate to SettingsHelper and TTS Instance
                     if (bestVoice != null) {
                         settingsHelper.ttsVoice = bestVoice.name
+                        currentVoiceId.value = bestVoice.name
                         settingsHelper.ttsLanguage = bestVoice.locale.toLanguageTag()
                         t.voice = bestVoice
                     } else {
                         // Reset to nothing if the engine is empty or invalid
                         settingsHelper.ttsVoice = null
+                        currentVoiceId.value = null
                         settingsHelper.ttsLanguage = null
                     }
 
@@ -173,6 +195,8 @@ fun SettingsScreen(
     isTtsReady: Boolean,
     engines: List<TextToSpeech.EngineInfo>,
     voices: List<Voice>,
+    currentEngineId: String,
+    currentVoiceId: String,
     onEngineSelected: (String) -> Unit,
     onVoiceSelected: (String) -> Unit,
     onPlaySample: () -> Unit,
@@ -200,9 +224,9 @@ fun SettingsScreen(
         isTtsReady = isTtsReady,
         engines = engineModels,
         voices = voiceModels,
-        currentEngineId = settingsHelper.ttsEngine ?: "",
+        currentEngineId = currentEngineId,
         onEngineSelected = onEngineSelected,
-        currentVoiceId = settingsHelper.ttsVoice ?: "",
+        currentVoiceId = currentVoiceId,
         onVoiceSelected = onVoiceSelected,
         onPlaySample = onPlaySample,
         modifier = modifier
