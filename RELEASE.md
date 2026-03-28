@@ -1,6 +1,7 @@
 Release
 =======
 
+- `CHANGELOG.md` up to date, newest first
 - `app/build.gradle.kts`
   + `versionCode++`
   + `versionName`.major++
@@ -17,3 +18,4 @@ Release
   shasum -a 256 app/build/outputs/apk/release/app-release.apk > app/build/outputs/apk/release/app-release.apk.sha256
   ```
 - tag to `v${versionName}`
+- create release with latest release notes.
