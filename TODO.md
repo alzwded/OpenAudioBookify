@@ -20,7 +20,7 @@
 - [x] Ensure main window keeps track of global "doing something" vs "idle" state. In "doing something", the only action is "Cancel"; in "idle", you can select books, change settings, and hit start. Something about LocalBinder and StateFlow
 - [x] When "doing something", ensure we track which books were processed, which is being processed, which are done. I.e. add progressbar to stateflow
 - [x] Add "about" info on the settings screen, like a new openaudiobookifyapp@gmail.com contact info, link to github etc; or maybe just stick it in the topbar
+- [x] Check cancel works
+- [x] Add README.md
 - [ ] change domain from com.example.audiobookify to alzwded.openaudiobookify and rename project to OpenAudioBookify
 - [ ] rename theme from MyApplication to AudioBookify
-- [ ] Check cancel works
-- [x] Add README.md

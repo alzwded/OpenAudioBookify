@@ -295,7 +295,7 @@ fun AudioBookifyContent(
                     modifier = Modifier.weight(1f),
                     enabled = !isProcessing // Disable while processing
                 ) {
-                    Text("Add Books (TXT, EPUB, etc.)")
+                    Text("Add Books")
                 }
 
                 if (selectedBooks.isNotEmpty()) {
