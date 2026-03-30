@@ -78,6 +78,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _queueState = MutableStateFlow<List<BookState>>(emptyList())
     val queueState = _queueState.asStateFlow()
 
+    private val _selectedBooks = MutableStateFlow<List<Book>>(emptyList())
+    val selectedBooks = _selectedBooks.asStateFlow()
+
+    private val _outputDirUri = MutableStateFlow<Uri?>(null)
+    val outputDirUri = _outputDirUri.asStateFlow()
+
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             val binder = service as AudiobookService.LocalBinder
@@ -106,6 +112,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Bind to service immediately upon ViewModel creation
         val intent = Intent(application, AudiobookService::class.java)
         application.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+    }
+
+    fun addBooks(books: List<Book>) {
+        _selectedBooks.value = _selectedBooks.value + books
+    }
+
+    fun clearBooks() {
+        _selectedBooks.value = emptyList()
+    }
+
+    fun setOutputDirUri(uri: Uri?) {
+        _outputDirUri.value = uri
     }
 
     fun cancelWork() {
@@ -142,12 +160,12 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun OpenAudioBookifyApp(viewModel: MainViewModel) {
     val context = LocalContext.current
-    var selectedBooks by remember { mutableStateOf<List<Book>>(emptyList()) }
-    var outputDirUri by remember { mutableStateOf<Uri?>(null) }
 
     // Track the service state from the ViewModel
     val isProcessing by viewModel.isServiceActive.collectAsStateWithLifecycle()
     val queueState by viewModel.queueState.collectAsStateWithLifecycle()
+    val selectedBooks by viewModel.selectedBooks.collectAsStateWithLifecycle()
+    val outputDirUri by viewModel.outputDirUri.collectAsStateWithLifecycle()
 
     var hasNotificationPermission by remember {
         mutableStateOf(
@@ -173,7 +191,7 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
         contract = ActivityResultContracts.OpenMultipleDocuments(),
         onResult = { uris ->
             if (uris.isNotEmpty()) {
-                selectedBooks = selectedBooks + uris.map { uri ->
+                val newBooks = uris.map { uri ->
                     var displayName = "Unknown"
                     context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                         if (cursor.moveToFirst()) {
@@ -185,6 +203,7 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
                     }
                     Book(displayName, uri)
                 }
+                viewModel.addBooks(newBooks)
             }
         }
     )
@@ -192,7 +211,7 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
     val dirPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
         onResult = { uri ->
-            outputDirUri = uri
+            viewModel.setOutputDirUri(uri)
             uri?.let {
                 val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 context.contentResolver.takePersistableUriPermission(it, takeFlags)
@@ -241,7 +260,7 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
             isProcessing = isProcessing,
             queueState = queueState,
             onAddBooksClick = { filePickerLauncher.launch(arrayOf("*/*")) },
-            onClearBooksClick = { selectedBooks = emptyList() },
+            onClearBooksClick = { viewModel.clearBooks() },
             onSetOutputFolderClick = { dirPickerLauncher.launch(null) },
             onStartProcessingClick = {
                 if (outputDirUri != null && selectedBooks.isNotEmpty()) {
