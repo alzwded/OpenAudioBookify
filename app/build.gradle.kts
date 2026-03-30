@@ -32,6 +32,8 @@ android {
 
     buildTypes {
         release {
+            manifestPlaceholders["appName"] = "OpenAudioBookify"
+
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -39,6 +41,12 @@ android {
             )
 
             signingConfig = signingConfigs.getByName("release")
+        }
+
+        getByName("debug") {
+            // the debug version should stop clobbering my released install
+            applicationIdSuffix = ".debug"
+            manifestPlaceholders["appName"] = "OpenAudioBookify (Debug)"
         }
     }
     compileOptions {
