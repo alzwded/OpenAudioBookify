@@ -162,7 +162,14 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                     _queueState.value += newBooks
 
                     if (tts == null) {
-                        tts = TextToSpeech(this, this, settingsHelper.ttsEngine)
+                        try {
+                            tts = TextToSpeech(this, this, settingsHelper.ttsEngine)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to instantiate TextToSpeech engine", e)
+                            updateNotification("TTS Error: No TTS engine installed or accessible.")
+                            shutdownService()
+                            return START_NOT_STICKY
+                        }
                     } else if (pipeline == null) {
                         Log.i(TAG, "Pipeline does not exist, starting")
                         processNextBook()
@@ -211,7 +218,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
             tts?.setPitch(settingsHelper.pitch)
             processNextBook()
         } else {
-            updateNotification("Failed to initialize TTS.")
+            updateNotification("Failed to initialize TTS. Please install a TTS engine.")
             shutdownService()
         }
     }
@@ -258,15 +265,24 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                         provider = provider,
                         bookName = book.name,
                         outputDirUri = outputDirUri,
-                        settingsHelper.encoderBitrate,
+                        targetBitrate = settingsHelper.encoderBitrate,
                         onProgress = { chunk ->
                             updateBookState(nextUri, BookStatus.PROCESSING, chunk)
+                        },
+                        onError = { errorMsg ->
+                            serviceScope.launch(Dispatchers.Main) {
+                                updateNotification("Failed: $errorMsg")
+                                pipeline = null
+                                updateBookState(nextUri, BookStatus.FINISHED)
+                                processNextBook() // Move on to the next book or finish
+                            }
+                        },
+                        onPipelineComplete = {
+                            pipeline = null
+                            updateBookState(nextUri, BookStatus.FINISHED)
+                            processNextBook()
                         }
-                    ) {
-                        pipeline = null
-                        updateBookState(nextUri, BookStatus.FINISHED)
-                        processNextBook()
-                    }
+                    )
                     pipeline?.start()
                 }
             } catch (e: Exception) {

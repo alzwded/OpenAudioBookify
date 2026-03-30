@@ -87,6 +87,7 @@ class AudiobookPipeline(
     private val outputDirUri: Uri?,
     private val targetBitrate: Int = 48000,
     private val onProgress: (Int) -> Unit = {},
+    private val onError: (String) -> Unit = {},
     private val onPipelineComplete: () -> Unit
 ) {
     private val textChunks: Iterator<String> = provider.extractText().batchByLength(3900).iterator()
@@ -155,7 +156,7 @@ class AudiobookPipeline(
             ) {
                 Log.e(TAG, "Chunk MediaCodec Error on chunk $chunkIndex: ${exportException.message}")
                 cleanup()
-                onPipelineComplete()
+                onError("MediaCodec error on chunk $chunkIndex.")
             }
         })
     }
@@ -193,7 +194,21 @@ class AudiobookPipeline(
         val utteranceId = "chunk_$chunkIndex"
 
         val params = Bundle().apply { putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId) }
-        tts.synthesizeToFile(text, params, wavFile, utteranceId)
+        
+        try {
+            val result = tts.synthesizeToFile(text, params, wavFile, utteranceId)
+            if (result == TextToSpeech.ERROR) {
+                Log.e(TAG, "TTS Error: synthesizeToFile returned ERROR for chunk $chunkIndex")
+                isCancelled = true
+                cleanup()
+                onError("TTS engine failed to process text.")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception during TTS synthesizeToFile", e)
+            isCancelled = true
+            cleanup()
+            onError("TTS error: ${e.localizedMessage}")
+        }
     }
 
     private fun setupTtsListener() {
@@ -217,6 +232,9 @@ class AudiobookPipeline(
 
             override fun onError(utteranceId: String, errorCode: Int) {
                 Log.e(TAG, "TTS Error on chunk $chunkIndex: $errorCode")
+                isCancelled = true
+                cleanup()
+                onError("TTS engine error during synthesis (code $errorCode).")
             }
         })
     }
@@ -267,7 +285,7 @@ class AudiobookPipeline(
             ) {
                 Log.e(TAG, "Error merging final audiobook: ${exportException.message}")
                 cleanup(finalTempFile)
-                onPipelineComplete()
+                onError("Error merging final audiobook.")
             }
         })
 
