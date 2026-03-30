@@ -47,7 +47,7 @@ fun SettingsDefaultPreview() {
                 onRateChange = {},
                 pitch = 1.0f,
                 onPitchChange = {},
-                bitrate = "48000",
+                bitrate = 48000,
                 onBitrateChange = {},
                 isTtsReady = true,
                 engines = listOf(
@@ -92,7 +92,7 @@ fun SettingsNoEnginesPreview() {
                 onRateChange = {},
                 pitch = 1.0f,
                 onPitchChange = {},
-                bitrate = "48000",
+                bitrate = 48000,
                 onBitrateChange = {},
                 isTtsReady = true,
                 engines = emptyList(),

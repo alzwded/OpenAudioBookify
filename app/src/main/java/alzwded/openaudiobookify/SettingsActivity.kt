@@ -52,7 +52,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import java.util.Locale
 
-private val TAG = "SETTINGS_ACTIVITY";
+private const val TAG = "SETTINGS_ACTIVITY"
 
 // Simple Display Models for the UI
 data class TtsEngine(val id: String, val label: String)
@@ -214,7 +214,7 @@ fun SettingsScreen(
     // Local UI state for immediate slider/text feedback
     var rate by remember { mutableFloatStateOf(settingsHelper.speechRate) }
     var pitch by remember { mutableFloatStateOf(settingsHelper.pitch) }
-    var bitrate by remember { mutableStateOf(settingsHelper.encoderBitrate.toString()) }
+    var bitrate by remember { mutableIntStateOf(settingsHelper.encoderBitrate) }
 
     // Map system objects to our simple Display Models
     val engineModels = engines.map { TtsEngine(it.name, it.label) }
@@ -228,7 +228,7 @@ fun SettingsScreen(
         bitrate = bitrate,
         onBitrateChange = {
             bitrate = it
-            it.toIntOrNull()?.let { intVal -> settingsHelper.encoderBitrate = intVal }
+            settingsHelper.encoderBitrate = it
         },
         isTtsReady = isTtsReady,
         engines = engineModels,
@@ -249,8 +249,8 @@ fun SettingsScreenContent(
     onRateChange: (Float) -> Unit,
     pitch: Float,
     onPitchChange: (Float) -> Unit,
-    bitrate: String,
-    onBitrateChange: (String) -> Unit,
+    bitrate: Int,
+    onBitrateChange: (Int) -> Unit,
     isTtsReady: Boolean,
     engines: List<TtsEngine>,
     voices: List<TtsVoice>,
@@ -390,12 +390,21 @@ fun SettingsScreenContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        OutlinedTextField(
-            value = bitrate,
-            onValueChange = onBitrateChange,
-            label = { Text("Encoder Bitrate (bps) - Default 48000") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth()
+        val bitrateValues = listOf(48000, 64000, 128000, 192000, 256000)
+        val bitrateLabels = listOf("Lowest", "Low", "Typical", "High", "Highest")
+        val currentIndex = bitrateValues.indexOf(bitrate).coerceAtLeast(0)
+
+        Text(
+            text = "Encoder Bitrate: ${bitrateLabels[currentIndex]} (${bitrate / 1000} kbps)",
+            style = MaterialTheme.typography.bodyLarge
+        )
+        Slider(
+            value = currentIndex.toFloat(),
+            onValueChange = { index ->
+                onBitrateChange(bitrateValues[index.toInt()])
+            },
+            valueRange = 0f..4f,
+            steps = 3
         )
     }
 
