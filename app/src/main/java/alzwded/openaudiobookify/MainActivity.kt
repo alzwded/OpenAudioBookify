@@ -115,7 +115,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addBooks(books: List<Book>) {
-        _selectedBooks.value = _selectedBooks.value + books
+        val currentList = _selectedBooks.value
+        // Filter out books whose URI is already in the current list
+        val newBooks = books.filter { newBook -> currentList.none { it.uri == newBook.uri } }
+        _selectedBooks.value = currentList + newBooks
+    }
+
+    fun removeBook(book: Book) {
+        _selectedBooks.value = _selectedBooks.value.filter { it.uri != book.uri }
     }
 
     fun clearBooks() {
@@ -261,6 +268,7 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
             queueState = queueState,
             onAddBooksClick = { filePickerLauncher.launch(arrayOf("*/*")) },
             onClearBooksClick = { viewModel.clearBooks() },
+            onRemoveBookClick = { book -> viewModel.removeBook(book) },
             onSetOutputFolderClick = { dirPickerLauncher.launch(null) },
             onStartProcessingClick = {
                 if (outputDirUri != null && selectedBooks.isNotEmpty()) {
@@ -292,6 +300,7 @@ fun OpenAudioBookifyContent(
     queueState: List<BookState>,
     onAddBooksClick: () -> Unit,
     onClearBooksClick: () -> Unit,
+    onRemoveBookClick: (Book) -> Unit,
     onSetOutputFolderClick: () -> Unit,
     onStartProcessingClick: () -> Unit,
     onCancelProcessingClick: () -> Unit
@@ -367,7 +376,25 @@ fun OpenAudioBookifyContent(
             } else {
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     items(selectedBooks) { book ->
-                        Text(text = book.name, modifier = Modifier.padding(vertical = 4.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = book.name,
+                                modifier = Modifier.weight(1f).padding(end = 8.dp),
+                                maxLines = 1
+                            )
+                            IconButton(
+                                onClick = { onRemoveBookClick(book) },
+                                enabled = !isProcessing
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Remove ${book.name}")
+                            }
+                        }
                     }
                 }
             }
@@ -428,6 +455,7 @@ fun DefaultPreview() {
                 ),
                 onAddBooksClick = {},
                 onClearBooksClick = {},
+                onRemoveBookClick = {},
                 onSetOutputFolderClick = {},
                 onStartProcessingClick = {},
                 onCancelProcessingClick = {}
@@ -472,6 +500,7 @@ fun IsProcessingPreview() {
                 ),
                 onAddBooksClick = {},
                 onClearBooksClick = {},
+                onRemoveBookClick = {},
                 onSetOutputFolderClick = {},
                 onStartProcessingClick = {},
                 onCancelProcessingClick = {}
