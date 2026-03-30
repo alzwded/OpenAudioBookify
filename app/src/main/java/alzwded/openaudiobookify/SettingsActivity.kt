@@ -40,13 +40,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -274,6 +274,33 @@ fun SettingsScreenContent(
             CircularProgressIndicator(modifier = Modifier.padding(bottom = 16.dp))
             Text("Initializing TTS Engine...", style = MaterialTheme.typography.bodyMedium)
             Spacer(modifier = Modifier.height(16.dp))
+        } else if (engines.isEmpty()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = "Warning",
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        text = "No Text-To-Speech engines found. Please install a TTS engine such as 'Speech Recognition and Synthesis by Google' or 'eSpeak' to configure these settings.",
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
         } else {
             // Engine Selector
             Box(modifier = Modifier.fillMaxWidth()) {
@@ -322,41 +349,43 @@ fun SettingsScreenContent(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-        }
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Speech Rate: ${"%.2f".format(rate)}x", style = MaterialTheme.typography.bodyLarge)
-            TextButton(onClick = { onRateChange(1.0f) }) {
-                Text("Reset")
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Speech Rate: ${"%.2f".format(rate)}x", style = MaterialTheme.typography.bodyLarge)
+                TextButton(onClick = { onRateChange(1.0f) }) {
+                    Text("Reset")
+                }
             }
-        }
-        Slider(
-            value = rate,
-            onValueChange = onRateChange,
-            valueRange = 0.5f..4.0f
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+            Slider(
+                value = rate,
+                onValueChange = onRateChange,
+                valueRange = 0.5f..4.0f
+            )
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Pitch: ${"%.2f".format(pitch)}", style = MaterialTheme.typography.bodyLarge)
-            TextButton(onClick = { onPitchChange(1.0f) }) {
-                Text("Reset")
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Pitch: ${"%.2f".format(pitch)}", style = MaterialTheme.typography.bodyLarge)
+                TextButton(onClick = { onPitchChange(1.0f) }) {
+                    Text("Reset")
+                }
             }
-        }
-        Slider(
-            value = pitch,
-            onValueChange = onPitchChange,
-            valueRange = 0.25f..2.0f
-        )
+            Slider(
+                value = pitch,
+                onValueChange = onPitchChange,
+                valueRange = 0.25f..2.0f
+            )
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Button(
-            onClick = onPlaySample,
-            enabled = isTtsReady,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Play Sample")
+            Button(
+                onClick = onPlaySample,
+                enabled = isTtsReady,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Play Sample")
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -476,71 +505,6 @@ fun SearchableSelectionDialog(
                     Text("Cancel")
                 }
             }
-        }
-    }
-}
-
-@DevicesPreview
-@Composable
-fun SelectionDialogPreview() {
-	OpenAudioBookifyTheme {
-        SearchableSelectionDialog(
-			title = "Select Voice",
-			searchLabel = "Search voices",
-            options = listOf(
-                SelectionOption("en-us-x-sfg", "en-us-x-sfg - English (United States) local"),
-                SelectionOption("en-us-x-ntk", "en-us-x-ntk - English (United States) network"),
-                SelectionOption("en-gb-x-fis", "en-gb-x-fis - English (United Kingdom) local")
-            ),
-            onDismissRequest = { },
-            onOptionSelected = { }
-        )
-	}
-}
-
-@DevicesPreview
-@Composable
-fun SettingsDefaultPreview() {
-    OpenAudioBookifyTheme {
-        Scaffold(
-            topBar = {
-                @OptIn(ExperimentalMaterial3Api::class)
-                TopAppBar(
-                    title = { Text("Settings") },
-                    navigationIcon = {
-                        IconButton(onClick = {}) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    }
-                )
-            }
-        ) { padding ->
-            // We use the stateless "Content" version for the preview.
-            // Note: Engines/Voices are empty because the system classes are final and hard to mock.
-            SettingsScreenContent(
-                rate = 1.25f,
-                onRateChange = {},
-                pitch = 1.0f,
-                onPitchChange = {},
-                bitrate = "48000",
-                onBitrateChange = {},
-                isTtsReady = true,
-                engines = listOf(
-                    TtsEngine("com.google.android.tts", "Google Speech Services"),
-                    TtsEngine("com.amazon.tts", "Amazon Polly")
-                ),
-                voices = listOf(
-                    TtsVoice("en-us-x-sfg", "English (US) - Voice I"),
-                    TtsVoice("en-us-x-ntk", "English (US) - Voice II"),
-                    TtsVoice("en-gb-x-fis", "English (UK) - Voice III")
-                ),
-                currentEngineId = "com.google.android.tts",
-                onEngineSelected = {},
-                currentVoiceId = "en-us-x-ntk",
-                onVoiceSelected = {},
-                onPlaySample = {},
-                modifier = Modifier.padding(padding)
-            )
         }
     }
 }
