@@ -55,13 +55,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -69,6 +69,7 @@ import kotlinx.coroutines.launch
 data class Book(val name: String, val uri: Uri)
 
 // --- ViewModel to Bridge Service & Compose ---
+@UnstableApi
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var audiobookService: AudiobookService? = null
 
@@ -149,6 +150,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 // -------------------------------------------
 
 class MainActivity : ComponentActivity() {
+    @androidx.annotation.OptIn(UnstableApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -163,6 +165,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@androidx.annotation.OptIn(UnstableApi::class)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OpenAudioBookifyApp(viewModel: MainViewModel) {
@@ -419,92 +422,3 @@ fun OpenAudioBookifyContent(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@DevicesPreview
-@Composable
-fun DefaultPreview() {
-    OpenAudioBookifyTheme {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("OpenAudioBookify") },
-                    actions = {
-                        IconButton(onClick = {}) {
-                            Icon(Icons.Default.Info, contentDescription = "About")
-                        }
-                        IconButton(onClick = {}) {
-                            Icon(Icons.Default.Settings, contentDescription = "Settings")
-                        }
-                    }
-                )
-            }
-        ) { paddingValues ->
-            OpenAudioBookifyContent(
-                modifier = Modifier.padding(paddingValues),
-                selectedBooks = listOf(
-                    Book("The Great Gatsby.epub", Uri.EMPTY),
-                    Book("1984.txt", Uri.EMPTY),
-                    Book("Pride and Prejudice.html", Uri.EMPTY)
-                ),
-                outputDirUri = null,
-                isProcessing = false,
-                queueState = listOf(
-                    BookState(Uri.EMPTY, "The Great Gatsby.epub", BookStatus.FINISHED, 8960),
-                    BookState(Uri.EMPTY, "1984.txt", BookStatus.PROCESSING, 42),
-                    BookState(Uri.EMPTY, "Pride and Prejudice.html", BookStatus.QUEUED, 0)
-                ),
-                onAddBooksClick = {},
-                onClearBooksClick = {},
-                onRemoveBookClick = {},
-                onSetOutputFolderClick = {},
-                onStartProcessingClick = {},
-                onCancelProcessingClick = {}
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@DevicesPreview
-@Composable
-fun IsProcessingPreview() {
-    OpenAudioBookifyTheme {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("OpenAudioBookify") },
-                    actions = {
-                        IconButton(onClick = {}) {
-                            Icon(Icons.Default.Info, contentDescription = "About")
-                        }
-                        IconButton(onClick = {}) {
-                            Icon(Icons.Default.Settings, contentDescription = "Settings")
-                        }
-                    }
-                )
-            }
-        ) { paddingValues ->
-            OpenAudioBookifyContent(
-                modifier = Modifier.padding(paddingValues),
-                selectedBooks = listOf(
-                    Book("The Great Gatsby.epub", Uri.EMPTY),
-                    Book("1984.txt", Uri.EMPTY),
-                    Book("Pride and Prejudice.html", Uri.EMPTY)
-                ),
-                outputDirUri = null,
-                isProcessing = true,
-                queueState = listOf(
-                    BookState(Uri.EMPTY, "The Great Gatsby.epub", BookStatus.FINISHED, 8960),
-                    BookState(Uri.EMPTY, "1984.txt", BookStatus.PROCESSING, 42),
-                    BookState(Uri.EMPTY, "Pride and Prejudice.html", BookStatus.QUEUED, 0)
-                ),
-                onAddBooksClick = {},
-                onClearBooksClick = {},
-                onRemoveBookClick = {},
-                onSetOutputFolderClick = {},
-                onStartProcessingClick = {},
-                onCancelProcessingClick = {}
-            )
-        }
-    }
-}
