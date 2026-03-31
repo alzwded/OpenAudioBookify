@@ -37,7 +37,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
@@ -46,7 +45,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.Role
+import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -72,6 +72,7 @@ class SettingsActivity : ComponentActivity() {
     private var currentEngineId = mutableStateOf<String?>(null)
     private var currentVoiceId = mutableStateOf<String?>(null)
 
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -87,7 +88,6 @@ class SettingsActivity : ComponentActivity() {
             OpenAudioBookifyTheme {
                 Scaffold(
                     topBar = {
-                        @OptIn(ExperimentalMaterial3Api::class)
                         TopAppBar(
                             title = { Text("Settings") },
                             navigationIcon = {
@@ -117,7 +117,7 @@ class SettingsActivity : ComponentActivity() {
                             val voiceObj = availableVoices.find { it.name == voiceId }
                             Log.d(TAG, "looking for ${voiceId}, found ${voiceObj?.name ?: "<null>"}")
                             voiceObj?.let {
-                                Log.d("TTS", "selected ${it.name}")
+                                Log.d(TAG, "selected ${it.name}")
                                 settingsHelper.ttsVoice = it.name
                                 currentVoiceId.value = it.name
                                 settingsHelper.ttsLanguage = it.locale.toLanguageTag()
@@ -146,44 +146,50 @@ class SettingsActivity : ComponentActivity() {
     private fun initTts(engineName: String?) {
         tts?.shutdown() // Ensure any existing instance is cleaned up
         tts = TextToSpeech(this, { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                tts?.let { t ->
-                    availableEngines.clear()
-                    availableEngines.addAll(t.engines)
-                    availableVoices.clear()
-                    
-                    if (currentEngineId.value == null) {
-                        currentEngineId.value = t.defaultEngine
+            runOnUiThread {
+                if (status == TextToSpeech.SUCCESS) {
+                    tts?.let { t ->
+                        availableEngines.clear()
+                        availableEngines.addAll(t.engines)
+                        availableVoices.clear()
+                        
+                        if (currentEngineId.value == null) {
+                            currentEngineId.value = t.defaultEngine
+                        }
+
+                        // reset voices, as they probably don't match across engines
+                        val voices = t.voices?.toList()?.sortedBy { it.name } ?: emptyList()
+                        availableVoices.addAll(voices)
+
+                        // Determine the best voice based on system locale
+                        val systemLocale = Locale.getDefault()
+
+                        val bestVoice =
+                            currentVoiceId.value?.let { voiceId -> voices.find { it.name == voiceId } } // restore voice from settings bundle
+                            ?: voices.find { it.locale == systemLocale } // Exact match
+                            ?: voices.find { it.locale.language == systemLocale.language } // Language match
+                            ?: voices.firstOrNull() // Absolute first fallback
+
+                        // Propagate to SettingsHelper and TTS Instance
+                        if (bestVoice != null) {
+                            settingsHelper.ttsVoice = bestVoice.name
+                            currentVoiceId.value = bestVoice.name
+                            settingsHelper.ttsLanguage = bestVoice.locale.toLanguageTag()
+                            t.voice = bestVoice
+                        } else {
+                            // Reset to nothing if the engine is empty or invalid
+                            settingsHelper.ttsVoice = null
+                            currentVoiceId.value = null
+                            settingsHelper.ttsLanguage = null
+                        }
+
+                        // flipping this from false to true triggers a re-render
+                        isTtsReady.value = true
                     }
-
-                    // reset voices, as they probably don't match across engines
-                    val voices = t.voices?.toList()?.sortedBy { it.name } ?: emptyList()
-                    availableVoices.addAll(voices)
-
-                    // Determine the best voice based on system locale
-                    val systemLocale = Locale.getDefault()
-
-                    val bestVoice =
-                        currentVoiceId?.value?.let { voiceId -> voices.find { it.name == voiceId } } // restore voice from settings bundle
-                        ?: voices.find { it.locale == systemLocale } // Exact match
-                        ?: voices.find { it.locale.language == systemLocale.language } // Language match
-                        ?: voices.firstOrNull() // Absolute first fallback
-
-                    // Propagate to SettingsHelper and TTS Instance
-                    if (bestVoice != null) {
-                        settingsHelper.ttsVoice = bestVoice.name
-                        currentVoiceId.value = bestVoice.name
-                        settingsHelper.ttsLanguage = bestVoice.locale.toLanguageTag()
-                        t.voice = bestVoice
-                    } else {
-                        // Reset to nothing if the engine is empty or invalid
-                        settingsHelper.ttsVoice = null
-                        currentVoiceId.value = null
-                        settingsHelper.ttsLanguage = null
-                    }
-
-                    // flipping this from false to true triggers a re-render
-                    isTtsReady.value = true
+                } else {
+                    Log.e(TAG, "Failed to initialize TTS with engine '$engineName'. Status code: $status")
+                    Toast.makeText(this@SettingsActivity, "Failed to initialize TTS", Toast.LENGTH_LONG).show()
+                    finish()
                 }
             }
         }, engineName)
@@ -302,10 +308,22 @@ fun SettingsScreenContent(
             }
             Spacer(modifier = Modifier.height(24.dp))
         } else {
+            val engineDisplayText = engines.find { it.id == currentEngineId }?.label ?: currentEngineId
+
             // Engine Selector
-            Box(modifier = Modifier.fillMaxWidth()) {
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .clearAndSetSemantics {
+                    contentDescription = "TTS Engine: $engineDisplayText"
+                    role = Role.Button
+                    onClick(label = "Select Engine") {
+                        if (engines.isNotEmpty()) showEngineSelection = true
+                        true
+                    }
+                }
+            ) {
                 OutlinedTextField(
-                    value = engines.find { it.id == currentEngineId }?.label ?: currentEngineId,
+                    value = engineDisplayText,
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("TTS Engine") },
@@ -325,12 +343,24 @@ fun SettingsScreenContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            val voiceDisplayText = voices.find { it.id == currentVoiceId }?.displayName
+                                   ?: if (voices.isEmpty()) "No voices available for this engine"
+                                      else "Select a voice"
             // Voice Selector (Opens a Searchable Dialog instead of a Dropdown)
-            Box(modifier = Modifier.fillMaxWidth()) {
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .clearAndSetSemantics {
+                    contentDescription = "Voice: $voiceDisplayText"
+                    role = Role.Button
+                    onClick(label = "Select Voice") {
+                        if (voices.isNotEmpty()) showVoiceSelection = true
+                        true
+                    }
+                }
+            ) {
                 OutlinedTextField(
                     // Display voice name alongside its friendly locale name
-                    value = voices.find { it.id == currentVoiceId }?.displayName
-                        ?: if (voices.isEmpty()) "No voices available for this engine" else "Select a voice",
+                    value = voiceDisplayText,
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("TTS Voice") },
@@ -350,29 +380,58 @@ fun SettingsScreenContent(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Speech Rate: ${"%.2f".format(rate)}x", style = MaterialTheme.typography.bodyLarge)
-                TextButton(onClick = { onRateChange(1.0f) }) {
-                    Text("Reset")
+            val speechRateDisplayText = "${"%.2f".format(rate)}x"
+            Row(
+                modifier = Modifier.fillMaxWidth().semantics(/*mergeDescendants = true*/) {},
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Speech Rate: $speechRateDisplayText",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.clearAndSetSemantics { } )
+                TextButton(
+                    onClick = { onRateChange(1.0f) },
+                    modifier = Modifier.semantics {
+                        contentDescription = "Reset Speech Rate"
+                    }
+                ) {
+                    Text("Reset", modifier = Modifier.clearAndSetSemantics { })
                 }
             }
             Slider(
                 value = rate,
                 onValueChange = onRateChange,
-                valueRange = 0.5f..4.0f
+                valueRange = 0.5f..4.0f,
+                modifier = Modifier.semantics {
+                    contentDescription = "Speech Rate: $speechRateDisplayText"
+                }
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Pitch: ${"%.2f".format(pitch)}", style = MaterialTheme.typography.bodyLarge)
-                TextButton(onClick = { onPitchChange(1.0f) }) {
-                    Text("Reset")
+            val pitchDisplayText = "%.2f".format(pitch)
+            Row(
+                modifier = Modifier.fillMaxWidth().semantics(/*mergeDescendants = true*/) {},
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Pitch: $pitchDisplayText",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.clearAndSetSemantics { }
+                )
+                TextButton(
+                    onClick = { onPitchChange(1.0f) },
+                    modifier = Modifier.semantics {
+                        contentDescription = "Reset Pitch"
+                    }
+                ) {
+                    Text("Reset", modifier = Modifier.clearAndSetSemantics { })
                 }
             }
             Slider(
                 value = pitch,
                 onValueChange = onPitchChange,
-                valueRange = 0.25f..2.0f
+                valueRange = 0.25f..2.0f,
+                modifier = Modifier.semantics {
+                    contentDescription = "Pitch: $pitchDisplayText"
+                }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -396,7 +455,8 @@ fun SettingsScreenContent(
 
         Text(
             text = "Encoder Bitrate: ${bitrateLabels[currentIndex]} (${bitrate / 1000} kbps)",
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.clearAndSetSemantics { }
         )
         Slider(
             value = currentIndex.toFloat(),
@@ -404,7 +464,13 @@ fun SettingsScreenContent(
                 onBitrateChange(bitrateValues[index.toInt()])
             },
             valueRange = 0f..4f,
-            steps = 3
+            steps = 3,
+            modifier = Modifier.semantics {
+                val index = currentIndex.toInt()
+                val label = bitrateLabels.getOrNull(index) ?: "Unknown"
+                val kbps = bitrateValues.getOrNull(index)?.let { "(${ it / 1000 } kbps)" } ?: ""
+                contentDescription = "Encoder Bitrate: $label $kbps"
+            }
         )
     }
 
