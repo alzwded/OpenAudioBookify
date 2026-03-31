@@ -55,6 +55,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
@@ -352,7 +353,10 @@ fun OpenAudioBookifyContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(text = "Books to process:", style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = "Books to process:",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.semantics { heading() })
 
             if (isProcessing && queueState.isNotEmpty()) {
                 LazyColumn(modifier = Modifier.weight(1f)) {
@@ -360,7 +364,8 @@ fun OpenAudioBookifyContent(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp),
+                                .padding(vertical = 4.dp)
+                                .semantics(mergeDescendants = true) {},
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
@@ -382,7 +387,8 @@ fun OpenAudioBookifyContent(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp),
+                                .padding(vertical = 4.dp)
+                                .semantics(mergeDescendants = true) {},
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
