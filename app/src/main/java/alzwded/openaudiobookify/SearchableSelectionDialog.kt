@@ -102,6 +102,7 @@ fun SearchableSelectionDialog(
                                     onClick = { onOptionSelected(option.id) }
                                 )
                                 .padding(vertical = 16.dp, horizontal = 8.dp),
+                            // TODO might want to add some icon or a stub RadioButton to visually indicate selection, but this is good enough for now.
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                             )
