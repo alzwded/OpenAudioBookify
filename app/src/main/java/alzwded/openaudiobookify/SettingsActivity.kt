@@ -46,6 +46,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Role
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -269,6 +270,13 @@ fun SettingsScreenContent(
 ) {
     var showEngineSelection by remember { mutableStateOf(false) }
     var showVoiceSelection by remember { mutableStateOf(false) }
+    val view = LocalView.current
+
+    LaunchedEffect(isTtsReady) {
+        if (isTtsReady) {
+            view.announceForAccessibility("Ready")
+        }
+    }
 
     Column(
         modifier = modifier
@@ -278,7 +286,13 @@ fun SettingsScreenContent(
     ) {
         if (!isTtsReady) {
             CircularProgressIndicator(modifier = Modifier.padding(bottom = 16.dp))
-            Text("Initializing TTS Engine...", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = "Initializing TTS Engine...",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.semantics {
+                    liveRegion = LiveRegionMode.Polite
+                }
+            )
             Spacer(modifier = Modifier.height(16.dp))
         } else if (engines.isEmpty()) {
             Card(
@@ -402,7 +416,8 @@ fun SettingsScreenContent(
                 onValueChange = onRateChange,
                 valueRange = 0.5f..4.0f,
                 modifier = Modifier.semantics {
-                    contentDescription = "Speech Rate: $speechRateDisplayText"
+                    contentDescription = "Speech Rate"
+                    stateDescription = speechRateDisplayText
                 }
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -430,7 +445,8 @@ fun SettingsScreenContent(
                 onValueChange = onPitchChange,
                 valueRange = 0.25f..2.0f,
                 modifier = Modifier.semantics {
-                    contentDescription = "Pitch: $pitchDisplayText"
+                    contentDescription = "Pitch"
+                    stateDescription = pitchDisplayText
                 }
             )
 
@@ -469,7 +485,8 @@ fun SettingsScreenContent(
                 val index = currentIndex.toInt()
                 val label = bitrateLabels.getOrNull(index) ?: "Unknown"
                 val kbps = bitrateValues.getOrNull(index)?.let { "(${ it / 1000 } kbps)" } ?: ""
-                contentDescription = "Encoder Bitrate: $label $kbps"
+                contentDescription = "Encoder Bitrate"
+                stateDescription = "$label $kbps"
             }
         )
     }
