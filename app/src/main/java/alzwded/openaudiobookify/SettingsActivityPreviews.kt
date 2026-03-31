@@ -14,6 +14,7 @@ fun SelectionDialogPreview() {
         SearchableSelectionDialog(
 			title = "Select Voice",
 			searchLabel = "Search voices",
+            currentSelectedId = "en-gb-x-fis",
             options = listOf(
                 SelectionOption("en-us-x-sfg", "en-us-x-sfg - English (United States) local"),
                 SelectionOption("en-us-x-ntk", "en-us-x-ntk - English (United States) network"),

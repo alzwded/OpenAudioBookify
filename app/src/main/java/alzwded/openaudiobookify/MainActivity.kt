@@ -279,8 +279,8 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
                     }
                 } else {
                     val message = when {
-                        outputDirUri == null -> "Select output folder"
-                        selectedBooks.isEmpty() -> "Add some books"
+                        outputDirUri == null -> "No output folder selected"
+                        selectedBooks.isEmpty() -> "Add some books first"
                         else -> "Unknown error"
                     }
                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()

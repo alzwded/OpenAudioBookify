@@ -29,6 +29,7 @@ import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.Voice
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -37,6 +38,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
@@ -45,9 +47,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.Role
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.*
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -497,6 +499,7 @@ fun SettingsScreenContent(
         SearchableSelectionDialog(
             title = "Select Engine",
             searchLabel = "Search engines",
+            currentSelectedId = currentEngineId,
             options = engineOptions,
             onDismissRequest = { showEngineSelection = false },
             onOptionSelected = {
@@ -512,6 +515,7 @@ fun SettingsScreenContent(
         SearchableSelectionDialog(
             title = "Select Voice",
             searchLabel = "Search voices",
+            currentSelectedId = currentVoiceId,
             options = voiceOptions,
             onDismissRequest = { showVoiceSelection = false },
             onOptionSelected = {
@@ -527,6 +531,7 @@ fun SettingsScreenContent(
 fun SearchableSelectionDialog(
     title: String,
     searchLabel: String,
+    currentSelectedId: String,
     options: List<SelectionOption>,
     onDismissRequest: () -> Unit,
     onOptionSelected: (String) -> Unit
@@ -567,14 +572,23 @@ fun SearchableSelectionDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 LazyColumn(modifier = Modifier.weight(1f)) {
+
                     items(filteredOptions, key = { it.id }) { option ->
+                        val isSelected = option.id == currentSelectedId
                         Text(
                             text = option.label,
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .selectable(
+                                    selected = isSelected,
+                                    role = Role.RadioButton,
+                                    onClick = { onOptionSelected(option.id) }
+                                )
                                 .clickable { onOptionSelected(option.id) }
                                 .padding(vertical = 16.dp, horizontal = 8.dp),
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
                         )
                     }
                     if (filteredOptions.isEmpty()) {

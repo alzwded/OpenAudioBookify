@@ -38,6 +38,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 
@@ -83,7 +85,9 @@ fun AboutScreen(onBackClick: () -> Unit) {
                 onClick = { uriHandler.openUri("https://github.com/alzwded/OpenAudioBookify") },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("GitHub Repository")
+                Text("GitHub Repository", modifier = Modifier.semantics {
+                    contentDescription = "Open GitHub Repository to view code or report issues"
+                })
             }
             
             Spacer(modifier = Modifier.height(8.dp))
