@@ -101,7 +101,6 @@ fun SearchableSelectionDialog(
                                     role = Role.RadioButton,
                                     onClick = { onOptionSelected(option.id) }
                                 )
-                                .clickable { onOptionSelected(option.id) }
                                 .padding(vertical = 16.dp, horizontal = 8.dp),
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
