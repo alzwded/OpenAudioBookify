@@ -36,6 +36,7 @@ import android.net.Uri
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.provider.OpenableColumns
 import android.speech.tts.TextToSpeech
 import android.speech.tts.Voice
@@ -86,6 +87,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
     private var pipeline: AudiobookPipeline? = null
     private var outputDirUri: Uri? = null
     private lateinit var settingsHelper: SettingsHelper
+    private var wakeLock: PowerManager.WakeLock? = null
 
     // A queue to hold the pending URIs and names to process sequentially
     private val bookQueue = ArrayDeque<Book>()
@@ -101,6 +103,28 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
         }
     }
 
+    private fun acquireWakeLock() {
+        if (wakeLock == null) {
+            val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+            wakeLock = powerManager.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                "OpenAudioBookify::AudiobookGenerationWakeLock"
+            )
+        }
+        if (wakeLock?.isHeld == false) {
+            Log.i(TAG, "Acquiring WakeLock")
+            // Acquiring with a 12-hour timeout as a safety net against zombie locks
+            wakeLock?.acquire(12 * 60 * 60 * 1000L) 
+        }
+    }
+
+    private fun releaseWakeLock() {
+        if (wakeLock?.isHeld == true) {
+            Log.i(TAG, "Releasing WakeLock")
+            wakeLock?.release()
+        }
+    }
+
     override fun onCreate() {
         Log.i(TAG, "Creating service")
         super.onCreate()
@@ -113,6 +137,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
             ACTION_START -> {
                 Log.i(TAG, "Starting")
                 _isProcessing.value = true
+                acquireWakeLock()
 
                 // Android 14+ Requires specifying foreground service type
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -135,6 +160,11 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
 
                 if (outUri != null) {
                     outputDirUri = outUri
+                } else {
+                    Log.e(TAG, "No output directory URI provided. Aborting.")
+                    updateNotification("Error: No output directory selected.")
+                    shutdownService()
+                    return START_NOT_STICKY
                 }
 
                 // Retrieve the ArrayList of URIs depending on the Android version
@@ -307,6 +337,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
         tts?.shutdown()
         tts = null
         _isProcessing.value = false
+        releaseWakeLock()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }

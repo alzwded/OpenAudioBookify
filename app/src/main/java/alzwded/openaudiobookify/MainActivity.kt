@@ -202,7 +202,13 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
         contract = ActivityResultContracts.OpenMultipleDocuments(),
         onResult = { uris ->
             if (uris.isNotEmpty()) {
+                val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION
                 val newBooks = uris.map { uri ->
+                    try {
+                        context.contentResolver.takePersistableUriPermission(uri, takeFlags)
+                    } catch (e: SecurityException) {
+                        e.printStackTrace()
+                    }
                     var displayName = "Unknown"
                     context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                         if (cursor.moveToFirst()) {

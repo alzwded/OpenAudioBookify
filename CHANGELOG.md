@@ -1,3 +1,11 @@
+6.0
+===
+
+- Acquire wakelock while background service is active
+- Don't overwrite files in the output directory
+- Deal with SAF better
+- Defensive around output dir actually being selected
+
 5.0
 ===
 

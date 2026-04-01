@@ -308,7 +308,16 @@ class AudiobookPipeline(
         try {
             val tree = DocumentFile.fromTreeUri(context, outputDirUri!!) ?: return false
             val safeName = bookName.replace(Regex("[\\\\/:*?\"<>|]"), "_")
-            val fileName = "$safeName.m4a"
+            
+            // Generate a unique filename by appending (1), (2), etc. if it exists
+            var finalName = safeName
+            var counter = 1
+            while (tree.findFile("$finalName.m4a") != null) {
+                finalName = "$safeName ($counter)"
+                counter++
+            }
+            
+            val fileName = "$finalName.m4a"
 
             val docFile = tree.createFile("audio/mp4", fileName) ?: return false
             context.contentResolver.openOutputStream(docFile.uri)?.use { outStream ->
