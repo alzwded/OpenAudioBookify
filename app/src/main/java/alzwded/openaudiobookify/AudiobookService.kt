@@ -89,6 +89,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
 
     // A queue to hold the pending URIs and names to process sequentially
     private val bookQueue = ArrayDeque<Book>()
+    private val failedBooks = mutableListOf<String>()
 
     // Service-bound Coroutine Scope
     private val serviceJob = Job()
@@ -268,6 +269,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                         },
                         onError = { errorMsg ->
                             serviceScope.launch(Dispatchers.Main) {
+                                failedBooks.add(cleanBookName)
                                 updateNotification("Failed: $errorMsg")
                                 pipeline = null
                                 updateBookState(nextBook.uri, BookStatus.FINISHED)
@@ -285,6 +287,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to start pipeline, ${e.message}")
                 withContext(Dispatchers.Main) {
+                    failedBooks.add(cleanBookName)
                     updateNotification("Error reading format for: $cleanBookName")
                     pipeline = null
                     processNextBook()
@@ -296,6 +299,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
     private fun shutdownService() {
         Log.i(TAG, "Shutting down")
         bookQueue.clear()
+        failedBooks.clear()
         _queueState.value = emptyList()
         pipeline?.cancel()
         pipeline = null
@@ -325,9 +329,17 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
 
     private fun showCompletionNotification() {
         val manager = getSystemService(NotificationManager::class.java)
+        
+        val contentText = if (failedBooks.isEmpty()) {
+            "All audiobooks generated successfully."
+        } else {
+            val names = failedBooks.joinToString(", ")
+            "Completed with ${failedBooks.size} errors: $names"
+        }
+
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("OpenAudioBookify")
-            .setContentText("All audiobooks generated successfully.")
+            .setContentText(contentText)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setAutoCancel(true)
             .setOngoing(false)

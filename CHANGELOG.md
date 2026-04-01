@@ -4,6 +4,7 @@
 - Remove all temporary cache files when done; fixes resource leak
 - Fix potential race condition in AudiobookService
 - Don't increment chunkIndex twice
+- Report failed books in final notification
 
 4.0
 ===

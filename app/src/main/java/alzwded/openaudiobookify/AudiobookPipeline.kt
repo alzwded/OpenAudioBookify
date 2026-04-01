@@ -272,9 +272,17 @@ class AudiobookPipeline(
         val mergeTransformer = createAudioTransformer(object : Transformer.Listener {
             override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                 Log.i(TAG, "Final m4a completed")
-                if (!isCancelled) writeToSaf(finalTempFile)
-                cleanup(finalTempFile)
-                onPipelineComplete()
+                if (!isCancelled) {
+                    if (writeToSaf(finalTempFile)) {
+                        cleanup(finalTempFile)
+                        onPipelineComplete()
+                    } else {
+                        cleanup(finalTempFile)
+                        onError("Failed to write the final audiobook to the selected folder.")
+                    }
+                } else {
+                    cleanup(finalTempFile)
+                }
             }
 
             override fun onError(
@@ -295,23 +303,23 @@ class AudiobookPipeline(
         }
     }
 
-    private fun writeToSaf(finalTempFile: File) {
+    private fun writeToSaf(finalTempFile: File): Boolean {
         Log.i(TAG, "Exporting to SAF")
         try {
-            val tree = DocumentFile.fromTreeUri(context, outputDirUri!!)
+            val tree = DocumentFile.fromTreeUri(context, outputDirUri!!) ?: return false
             val safeName = bookName.replace(Regex("[\\\\/:*?\"<>|]"), "_")
             val fileName = "$safeName.m4a"
 
-            val docFile = tree?.createFile("audio/mp4", fileName)
-            docFile?.uri?.let { destUri ->
-                context.contentResolver.openOutputStream(destUri)?.use { outStream ->
-                    finalTempFile.inputStream().use { inStream ->
-                        inStream.copyTo(outStream)
-                    }
+            val docFile = tree.createFile("audio/mp4", fileName) ?: return false
+            context.contentResolver.openOutputStream(docFile.uri)?.use { outStream ->
+                finalTempFile.inputStream().use { inStream ->
+                    inStream.copyTo(outStream)
                 }
-            }
+            } ?: return false
+            return true
         } catch (e: Exception) {
             Log.e(TAG, "SAF Write Error during final export: ${e.message}")
+            return false
         }
     }
 
