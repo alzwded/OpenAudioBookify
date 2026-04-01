@@ -145,7 +145,6 @@ class AudiobookPipeline(
                     encodedChunkFiles.add(tempM4a)
                 }
 
-                chunkIndex++
                 processNextChunk()
             }
 
