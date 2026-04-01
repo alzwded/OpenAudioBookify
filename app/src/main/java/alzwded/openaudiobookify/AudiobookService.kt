@@ -82,12 +82,13 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
     // -------------------------------
 
     private var tts: TextToSpeech? = null
+    private var isInitializingTts = false
     private var pipeline: AudiobookPipeline? = null
     private var outputDirUri: Uri? = null
     private lateinit var settingsHelper: SettingsHelper
 
-    // A queue to hold the pending URIs to process sequentially
-    private val bookQueue = ArrayDeque<Uri>()
+    // A queue to hold the pending URIs and names to process sequentially
+    private val bookQueue = ArrayDeque<Book>()
 
     // Service-bound Coroutine Scope
     private val serviceJob = Job()
@@ -145,7 +146,6 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
 
                 if (!uris.isNullOrEmpty()) {
                     val newBooks = uris.map { uri ->
-                        // TODO refactor this, we're doing it twice...
                         var bookName = "Unknown_Book"
                         contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                             if (cursor.moveToFirst()) {
@@ -155,14 +155,15 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                                 }
                             }
                         }
-                        BookState(uri, bookName, BookStatus.QUEUED, 0)
+                        Book(bookName, uri)
                     }
 
-                    bookQueue.addAll(uris)
-                    _queueState.value += newBooks
+                    bookQueue.addAll(newBooks)
+                    _queueState.value += newBooks.map { BookState(it.uri, it.name, BookStatus.QUEUED, 0) }
 
                     if (tts == null) {
                         try {
+                            isInitializingTts = true
                             tts = TextToSpeech(this, this, settingsHelper.ttsEngine)
                         } catch (e: Exception) {
                             Log.e(TAG, "Failed to instantiate TextToSpeech engine", e)
@@ -170,11 +171,11 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                             shutdownService()
                             return START_NOT_STICKY
                         }
-                    } else if (pipeline == null) {
+                    } else if (!isInitializingTts && pipeline == null) {
                         Log.i(TAG, "Pipeline does not exist, starting")
                         processNextBook()
                     } else {
-                        Log.i(TAG, "Pipeline exists, enqueuing")
+                        Log.i(TAG, "Pipeline exists or TTS initializing, enqueuing only")
                         updateNotification("Queued additional books. Total pending: ${bookQueue.size}")
                     }
                 } else if (bookQueue.isEmpty() && pipeline == null) {
@@ -189,6 +190,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
 
     override fun onInit(status: Int) {
         Log.i(TAG, "onInit $status")
+        isInitializingTts = false
         if (status == TextToSpeech.SUCCESS) {
             settingsHelper.ttsLanguage?.let {
                 tts?.language = Locale.forLanguageTag(it)
@@ -224,33 +226,28 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
     }
 
     private fun processNextBook() {
-        val nextUri = bookQueue.removeFirstOrNull()
+        val nextBook = bookQueue.removeFirstOrNull()
 
-        if (nextUri == null) {
+        if (nextBook == null) {
             Log.i(TAG, "No more books in queue, shutting down")
             showCompletionNotification()
             shutdownService()
             return
         }
 
-        _isProcessing.value = true
-        Log.i(TAG, "Next book")
-
-        var bookName = "Unknown_Book"
-        contentResolver.query(nextUri, null, null, null, null)?.use { cursor ->
-            if (cursor.moveToFirst()) {
-                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                if (nameIndex != -1) {
-                    bookName = cursor.getString(nameIndex)
-                }
-            }
+        if (pipeline != null) {
+            Log.w(TAG, "processNextBook: pipeline already active, ignoring")
+            return
         }
 
-        // Strip out the extension for cleaner file names later
-        val cleanBookName = bookName.substringBeforeLast(".")
-        val book = Book(cleanBookName, nextUri)
+        _isProcessing.value = true
+        Log.i(TAG, "Next book: ${nextBook.name}")
 
-        updateBookState(nextUri, BookStatus.PROCESSING, 0)
+        // Strip out the extension for cleaner file names later
+        val cleanBookName = nextBook.name.substringBeforeLast(".")
+        val book = Book(cleanBookName, nextBook.uri)
+
+        updateBookState(nextBook.uri, BookStatus.PROCESSING, 0)
         updateNotification("Generating Audiobook: $cleanBookName...")
 
         serviceScope.launch(Dispatchers.IO) {
@@ -267,19 +264,19 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                         outputDirUri = outputDirUri,
                         targetBitrate = settingsHelper.encoderBitrate,
                         onProgress = { chunk ->
-                            updateBookState(nextUri, BookStatus.PROCESSING, chunk)
+                            updateBookState(nextBook.uri, BookStatus.PROCESSING, chunk)
                         },
                         onError = { errorMsg ->
                             serviceScope.launch(Dispatchers.Main) {
                                 updateNotification("Failed: $errorMsg")
                                 pipeline = null
-                                updateBookState(nextUri, BookStatus.FINISHED)
+                                updateBookState(nextBook.uri, BookStatus.FINISHED)
                                 processNextBook() // Move on to the next book or finish
                             }
                         },
                         onPipelineComplete = {
                             pipeline = null
-                            updateBookState(nextUri, BookStatus.FINISHED)
+                            updateBookState(nextBook.uri, BookStatus.FINISHED)
                             processNextBook()
                         }
                     )
