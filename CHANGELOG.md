@@ -1,3 +1,8 @@
+4.0
+===
+
+Accessibility improvements for screen readers.
+
 3.0
 ===
 
