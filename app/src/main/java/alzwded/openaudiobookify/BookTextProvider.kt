@@ -313,19 +313,26 @@ class EpubBookTextProvider(
     private val book: Book
 ) : BookTextProvider {
 
-    override fun extractText(): Sequence<String> {
+    override fun extractText(): Sequence<String> = sequence {
         // Copy the URI content to a temporary File so ZipFile can process it
         val tempFile = File(context.cacheDir, "temp_${System.currentTimeMillis()}.epub")
-        context.contentResolver.openInputStream(book.uri)?.use { input ->
-            tempFile.outputStream().use { output ->
-                input.copyTo(output)
+        try {
+            context.contentResolver.openInputStream(book.uri)?.use { input ->
+                tempFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            // Use the existing Epub parsing logic
+            val metadata = EpubMetadataParser.parse(tempFile)
+            
+            yieldAll(extractEpubTextLazily(tempFile, metadata.spineList, metadata.manifestMap))
+        } finally {
+            if (tempFile.exists()) {
+                Log.i("EPUB_PROVIDER", "Deleting temp file ${tempFile.absolutePath}")
+                tempFile.delete()
             }
         }
-
-        // Use the existing Epub parsing logic
-        val metadata = EpubMetadataParser.parse(tempFile)
-        
-        return extractEpubTextLazily(tempFile, metadata.spineList, metadata.manifestMap)
     }
 }
 
