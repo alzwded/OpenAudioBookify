@@ -1,3 +1,10 @@
+5.0
+===
+
+- Remove all temporary cache files when done; fixes resource leak
+- Fix potential race condition in AudiobookService
+- Don't increment chunkIndex twice
+
 4.0
 ===
 
