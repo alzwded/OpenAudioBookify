@@ -3,6 +3,8 @@
 
 - You can now share epubs/text files into the app, as it is now registered
   for the `SEND` and `SEND_MULTIPLE` intents
+- Book URIs are now passed through ClipData, ensuring the app doesn't randomly
+  lose read permissions on the selected books partway through processing
 - Log tags now share a common prefix
 
 6.0
