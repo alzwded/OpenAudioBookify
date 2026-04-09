@@ -316,26 +316,21 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
             putParcelableArrayListExtra(AudiobookService.EXTRA_BOOK_URIS, ArrayList(selectedBooks.map { it.uri }))
             putExtra("EXTRA_OUTPUT_URI", outputDirUri)
 
-            // Safely transfer URI permissions to the Service using ClipData
-            if (outputDirUri != null || selectedBooks.isNotEmpty()) {
-                // Initialize with the first available URI
-                val firstUri = outputDirUri ?: selectedBooks.first().uri
-                val clipData = ClipData.newRawUri("AudiobookUris", firstUri)
+            // Only pass the book URIs via ClipData for temporary READ permission inheritance.
+            // The directory is picked with ACTION_OPEN_DOCUMENT_TREE and because it stems from
+            // the activity, we can immediately takePersistableUriPermission with read+write
+            if (selectedBooks.isNotEmpty()) {
+                val clipData = ClipData.newRawUri("AudiobookUris", selectedBooks.first().uri)
 
-                // If outputDirUri was used as the first item, we only need to add the books.
-                // If it wasn't, we add all books.
-                selectedBooks.forEach { book ->
-                    // Prevent adding the first URI twice if it happened to be the first book
-                    if (book.uri != firstUri) {
-                        clipData.addItem(ClipData.Item(book.uri))
-                    }
+                // Add any subsequent books
+                selectedBooks.drop(1).forEach { book ->
+                    clipData.addItem(ClipData.Item(book.uri))
                 }
-
                 this.clipData = clipData
-            }
 
-            // Ensure the service has permission to read the books and read/write the output
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                // ONLY ask to grant READ permission. If you ask for WRITE on an ACTION_SEND URI, it crashes.
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
         }
 
         ContextCompat.startForegroundService(context, intent)
