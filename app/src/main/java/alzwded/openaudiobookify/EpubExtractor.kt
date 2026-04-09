@@ -29,7 +29,7 @@ import android.util.Log
 import java.io.File
 import java.util.zip.ZipFile
 
-private const val TAG = "EPUB_EXTRACTOR"
+private const val TAG = "OAB_EPUB_EXTRACTOR"
 
 /**
  * Extracts text from an EPub file lazily, ensuring sentences remain coherent

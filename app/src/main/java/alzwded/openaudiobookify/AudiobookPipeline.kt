@@ -76,7 +76,7 @@ import androidx.media3.transformer.Transformer
 import androidx.media3.transformer.Codec
 import java.io.File
 
-private const val TAG = "AUDIOBOOK_PIPELINE"
+private const val TAG = "OAB_AUDIOBOOK_PIPELINE"
 
 @UnstableApi
 class AudiobookPipeline(

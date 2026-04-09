@@ -30,7 +30,7 @@ import android.util.Log
 import java.io.File
 import java.io.InputStreamReader
 
-private const val TAG = "BOOK_TEXT_PROVIDER"
+private const val TAG = "OAB_BOOK_TEXT_PROVIDER"
 
 /**
  * Interface for extracting text sequentially from a book source.

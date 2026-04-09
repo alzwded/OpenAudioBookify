@@ -49,7 +49,7 @@ import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import java.util.Locale
 
-private const val TAG = "SETTINGS_ACTIVITY"
+private const val TAG = "OAB_SETTINGS_ACTIVITY"
 
 // Simple Display Models for the UI
 data class TtsEngine(val id: String, val label: String)

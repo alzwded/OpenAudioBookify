@@ -48,7 +48,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.Locale
 
-private const val TAG = "AUDIOBOOK_SERVICE"
+private const val TAG = "OAB_AUDIOBOOK_SERVICE"
 
 enum class BookStatus { QUEUED, PROCESSING, FINISHED }
 data class BookState(
