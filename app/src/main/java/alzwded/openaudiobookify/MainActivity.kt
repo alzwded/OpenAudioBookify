@@ -43,6 +43,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -66,6 +67,9 @@ import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import android.util.Log
+
+private const val TAG = "OAB_MAIN_ACTIVITY"
 
 data class Book(val name: String, val uri: Uri)
 
@@ -116,10 +120,43 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         application.bindService(intent, connection, Context.BIND_AUTO_CREATE)
     }
 
-    fun addBooks(books: List<Book>) {
+    fun addBooks(uris: List<Uri>) {
+        val context = getApplication<Application>()
         val currentList = _selectedBooks.value
-        // Filter out books whose URI is already in the current list
-        val newBooks = books.filter { newBook -> currentList.none { it.uri == newBook.uri } }
+
+        // Filter out URIs already in the current list
+        val newUris = uris.filter { uri -> currentList.none { it.uri == uri } }
+
+        val newBooks = newUris.mapNotNull { uri ->
+            try {
+                // Request persistent read permission if supported (e.g. from OpenDocument)
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (e: SecurityException) {
+                // Some URIs (like from MediaStore or shared via Intent) don't support persistable permissions.
+                // We'll still try to use them with the temporary permission grant.
+                Log.w(TAG, "Could not take persistable permission for $uri: ${e.message}")
+            }
+
+            var displayName = "Unknown"
+            try {
+                context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        if (nameIndex != -1) {
+                            displayName = cursor.getString(nameIndex)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to query URI $uri", e)
+                // If we can't query it even now, we probably don't have access at all
+                return@mapNotNull null
+            }
+            Book(displayName, uri)
+        }
         _selectedBooks.value = currentList + newBooks
     }
 
@@ -150,18 +187,68 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 }
 // -------------------------------------------
 
+@androidx.annotation.OptIn(UnstableApi::class)
 class MainActivity : ComponentActivity() {
-    @androidx.annotation.OptIn(UnstableApi::class)
+    private val viewModel: MainViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        handleIncomingIntent(intent)
 
         enableEdgeToEdge()
 
         setContent {
             OpenAudioBookifyTheme {
-                val viewModel: MainViewModel = viewModel()
                 OpenAudioBookifyApp(viewModel = viewModel)
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        // Handle new intents when activity is already running
+        intent?.let { handleIncomingIntent(it) }
+    }
+
+    private fun handleIncomingIntent(intent: Intent?) {
+        when (intent?.action) {
+            Intent.ACTION_SEND -> {
+                handleSingleShare(intent)
+            }
+            Intent.ACTION_SEND_MULTIPLE -> {
+                handleMultipleShare(intent)
+            }
+        }
+    }
+
+    private fun handleSingleShare(intent: Intent) {
+        // Get the shared URI
+        val uri: Uri? = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra(Intent.EXTRA_STREAM)
+        }
+
+        uri?.let {
+            // Add to ViewModel
+            viewModel.addBooks(listOf(it))
+        }
+    }
+
+    private fun handleMultipleShare(intent: Intent) {
+        // Get multiple shared URIs
+        val uris: List<Uri> = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java) ?: emptyList()
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM) ?: emptyList()
+        }
+
+        if (uris.isNotEmpty()) {
+            // Add to ViewModel
+            viewModel.addBooks(uris)
         }
     }
 }
@@ -202,25 +289,7 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
         contract = ActivityResultContracts.OpenMultipleDocuments(),
         onResult = { uris ->
             if (uris.isNotEmpty()) {
-                val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION
-                val newBooks = uris.map { uri ->
-                    try {
-                        context.contentResolver.takePersistableUriPermission(uri, takeFlags)
-                    } catch (e: SecurityException) {
-                        e.printStackTrace()
-                    }
-                    var displayName = "Unknown"
-                    context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                        if (cursor.moveToFirst()) {
-                            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                            if (nameIndex != -1) {
-                                displayName = cursor.getString(nameIndex)
-                            }
-                        }
-                    }
-                    Book(displayName, uri)
-                }
-                viewModel.addBooks(newBooks)
+                viewModel.addBooks(uris)
             }
         }
     )
@@ -231,7 +300,11 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
             viewModel.setOutputDirUri(uri)
             uri?.let {
                 val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                context.contentResolver.takePersistableUriPermission(it, takeFlags)
+                try {
+                    context.contentResolver.takePersistableUriPermission(it, takeFlags)
+                } catch (e: SecurityException) {
+                    Log.w(TAG, "Could not take persistable permission for output dir $it", e)
+                }
             }
         }
     )
@@ -241,6 +314,8 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
             action = AudiobookService.ACTION_START
             putParcelableArrayListExtra(AudiobookService.EXTRA_BOOK_URIS, ArrayList(selectedBooks.map { it.uri }))
             putExtra("EXTRA_OUTPUT_URI", outputDirUri)
+            // Ensure the service has permission to read the books and read/write the output
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
         }
 
         ContextCompat.startForegroundService(context, intent)
@@ -433,4 +508,3 @@ fun OpenAudioBookifyContent(
         }
     }
 }
-

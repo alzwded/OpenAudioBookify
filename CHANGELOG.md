@@ -1,3 +1,10 @@
+7.0
+===
+
+- You can now share epubs/text files into the app, as it is now registered
+  for the `SEND` and `SEND_MULTIPLE` intents
+- Log tags now share a common prefix
+
 6.0
 ===
 
