@@ -67,7 +67,7 @@ object BookTextProviderFactory {
 fun Sequence<String>.batchByLength(maxLength: Int): Sequence<String> = sequence {
     val currentBatch = StringBuilder()
     for (paragraph in this@batchByLength) {
-        if (currentBatch.length + paragraph.length + 1 > maxLength) {
+        if (currentBatch.length + paragraph.length + 2 > maxLength) {
             if (currentBatch.isNotEmpty()) {
                 Log.d(TAG, "Yielding a paragraph of length ${currentBatch.length}")
                 yield(currentBatch.toString())
@@ -77,12 +77,12 @@ fun Sequence<String>.batchByLength(maxLength: Int): Sequence<String> = sequence 
         if (currentBatch.isNotEmpty()) {
             currentBatch.append("\n\n")
         }
-        if (paragraph.length + 1 < maxLength) {
+        if (paragraph.length + 2 < maxLength) {
             currentBatch.append(paragraph)
         } else {
-            Log.d(TAG, "Paragraph was ${paragraph.length} long, splitting in $maxLength - 1 chunks")
-            paragraph.chunked(maxLength - 1).mapIndexed { index, chunk ->
-                if ((index == paragraph.length / (maxLength - 1)) && chunk.length < maxLength - 1) {
+            Log.d(TAG, "Paragraph was ${paragraph.length} long, splitting in $maxLength - 2 chunks")
+            paragraph.chunked(maxLength - 2).mapIndexed { index, chunk ->
+                if ((index == paragraph.length / (maxLength - 2)) && chunk.length < maxLength - 2) {
                     currentBatch.append(chunk)
                 } else {
                     yield(chunk)
