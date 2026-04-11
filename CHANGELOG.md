@@ -1,7 +1,7 @@
 8.0
 ===
 
-- Added Romanian language translation
+- Added Romanian language translation, more translations welcome
 
 7.0
 ===
