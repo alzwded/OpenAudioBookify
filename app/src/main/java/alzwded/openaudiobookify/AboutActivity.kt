@@ -106,9 +106,10 @@ fun AboutScreen(onBackClick: () -> Unit) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = stringResource(R.string.license_text).trimIndent(),
-                style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace
+                text = stringResource(R.string.license_text),
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace
+                )
             )
             
             Spacer(modifier = Modifier.height(32.dp))
