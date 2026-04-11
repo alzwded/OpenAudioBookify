@@ -1,3 +1,8 @@
+8.0
+===
+
+- Added Romanian language translation
+
 7.0
 ===
 
