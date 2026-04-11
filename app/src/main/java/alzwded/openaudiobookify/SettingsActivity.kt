@@ -45,6 +45,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import java.util.Locale
@@ -83,10 +84,10 @@ class SettingsActivity : ComponentActivity() {
                 Scaffold(
                     topBar = {
                         TopAppBar(
-                            title = { Text("Settings") },
+                            title = { Text(stringResource(R.string.settings)) },
                             navigationIcon = {
                                 IconButton(onClick = { finish() }) {
-                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                                 }
                             }
                         )
@@ -109,7 +110,7 @@ class SettingsActivity : ComponentActivity() {
                         onVoiceSelected = { voiceId ->
                             // Find the actual Voice object by ID
                             val voiceObj = availableVoices.find { it.name == voiceId }
-                            Log.d(TAG, "looking for ${voiceId}, found ${voiceObj?.name ?: "<null>"}")
+                            Log.d(TAG, "looking for " + voiceId + ", found " + (voiceObj?.name ?: "null"))
                             voiceObj?.let {
                                 Log.d(TAG, "selected ${it.name}")
                                 settingsHelper.ttsVoice = it.name
@@ -182,7 +183,7 @@ class SettingsActivity : ComponentActivity() {
                     }
                 } else {
                     Log.e(TAG, "Failed to initialize TTS with engine '$engineName'. Status code: $status")
-                    Toast.makeText(this@SettingsActivity, "Failed to initialize TTS", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@SettingsActivity, getString(R.string.failed_to_init_tts), Toast.LENGTH_LONG).show()
                     finish()
                 }
             }
@@ -264,10 +265,11 @@ fun SettingsScreenContent(
     var showEngineSelection by remember { mutableStateOf(false) }
     var showVoiceSelection by remember { mutableStateOf(false) }
     val view = LocalView.current
+    val readyAnnounce = stringResource(R.string.tts_ready_announce)
 
     LaunchedEffect(isTtsReady) {
         if (isTtsReady) {
-            view.announceForAccessibility("Ready")
+            view.announceForAccessibility(readyAnnounce)
         }
     }
 
@@ -280,7 +282,7 @@ fun SettingsScreenContent(
         if (!isTtsReady) {
             CircularProgressIndicator(modifier = Modifier.padding(bottom = 16.dp))
             Text(
-                text = "Initializing TTS Engine...",
+                text = stringResource(R.string.initializing_tts),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.semantics {
                     liveRegion = LiveRegionMode.Polite
@@ -302,12 +304,12 @@ fun SettingsScreenContent(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Info,
-                        contentDescription = "Warning",
+                        contentDescription = stringResource(R.string.warning),
                         tint = MaterialTheme.colorScheme.onErrorContainer
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        text = "No Text-To-Speech engines found. Please install a TTS engine such as 'Speech Recognition and Synthesis by Google' or 'eSpeak' to configure these settings.",
+                        text = stringResource(R.string.no_tts_engines_found),
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -316,14 +318,16 @@ fun SettingsScreenContent(
             Spacer(modifier = Modifier.height(24.dp))
         } else {
             val engineDisplayText = engines.find { it.id == currentEngineId }?.label ?: currentEngineId
+            val ttsEngineLabel = stringResource(R.string.tts_engine)
+            val selectEngineLabel = stringResource(R.string.select_engine)
 
             // Engine Selector
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .clearAndSetSemantics {
-                    contentDescription = "TTS Engine: $engineDisplayText"
+                    contentDescription = "$ttsEngineLabel: $engineDisplayText"
                     role = Role.Button
-                    onClick(label = "Select Engine") {
+                    onClick(label = selectEngineLabel) {
                         if (engines.isNotEmpty()) showEngineSelection = true
                         true
                     }
@@ -333,7 +337,7 @@ fun SettingsScreenContent(
                     value = engineDisplayText,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("TTS Engine") },
+                    label = { Text(ttsEngineLabel) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showEngineSelection) },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -351,15 +355,17 @@ fun SettingsScreenContent(
             Spacer(modifier = Modifier.height(16.dp))
 
             val voiceDisplayText = voices.find { it.id == currentVoiceId }?.displayName
-                                   ?: if (voices.isEmpty()) "No voices available for this engine"
-                                      else "Select a voice"
+                                   ?: if (voices.isEmpty()) stringResource(R.string.no_voices_available)
+                                      else stringResource(R.string.select_voice_hint)
+            val ttsVoiceLabel = stringResource(R.string.tts_voice)
+            val selectVoiceLabel = stringResource(R.string.select_voice)
             // Voice Selector (Opens a Searchable Dialog instead of a Dropdown)
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .clearAndSetSemantics {
-                    contentDescription = "Voice: $voiceDisplayText"
+                    contentDescription = "$ttsVoiceLabel: $voiceDisplayText"
                     role = Role.Button
-                    onClick(label = "Select Voice") {
+                    onClick(label = selectVoiceLabel) {
                         if (voices.isNotEmpty()) showVoiceSelection = true
                         true
                     }
@@ -370,7 +376,7 @@ fun SettingsScreenContent(
                     value = voiceDisplayText,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("TTS Voice") },
+                    label = { Text(ttsVoiceLabel) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showVoiceSelection) },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -388,20 +394,23 @@ fun SettingsScreenContent(
             Spacer(modifier = Modifier.height(24.dp))
 
             val speechRateDisplayText = "${"%.2f".format(rate)}x"
+            val resetSpeechRateLabel = stringResource(R.string.reset_speech_rate)
+            val speechRateLabel = stringResource(R.string.speech_rate)
+
             Row(
                 modifier = Modifier.fillMaxWidth().semantics(/*mergeDescendants = true*/) {},
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Speech Rate: $speechRateDisplayText",
+                Text(stringResource(R.string.speech_rate_label, speechRateDisplayText),
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.clearAndSetSemantics { } )
                 TextButton(
                     onClick = { onRateChange(1.0f) },
                     modifier = Modifier.semantics {
-                        contentDescription = "Reset Speech Rate"
+                        contentDescription = resetSpeechRateLabel
                     }
                 ) {
-                    Text("Reset", modifier = Modifier.clearAndSetSemantics { })
+                    Text(stringResource(R.string.reset), modifier = Modifier.clearAndSetSemantics { })
                 }
             }
             Slider(
@@ -409,28 +418,31 @@ fun SettingsScreenContent(
                 onValueChange = onRateChange,
                 valueRange = 0.5f..4.0f,
                 modifier = Modifier.semantics {
-                    contentDescription = "Speech Rate"
+                    contentDescription = speechRateLabel
                     stateDescription = speechRateDisplayText
                 }
             )
             Spacer(modifier = Modifier.height(16.dp))
 
             val pitchDisplayText = "%.2f".format(pitch)
+            val resetPitchLabel = stringResource(R.string.reset_pitch)
+            val pitchLabel = stringResource(R.string.pitch)
+
             Row(
                 modifier = Modifier.fillMaxWidth().semantics(/*mergeDescendants = true*/) {},
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Pitch: $pitchDisplayText",
+                Text(stringResource(R.string.pitch_label, pitchDisplayText),
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.clearAndSetSemantics { }
                 )
                 TextButton(
                     onClick = { onPitchChange(1.0f) },
                     modifier = Modifier.semantics {
-                        contentDescription = "Reset Pitch"
+                        contentDescription = resetPitchLabel
                     }
                 ) {
-                    Text("Reset", modifier = Modifier.clearAndSetSemantics { })
+                    Text(stringResource(R.string.reset), modifier = Modifier.clearAndSetSemantics { })
                 }
             }
             Slider(
@@ -438,7 +450,7 @@ fun SettingsScreenContent(
                 onValueChange = onPitchChange,
                 valueRange = 0.25f..2.0f,
                 modifier = Modifier.semantics {
-                    contentDescription = "Pitch"
+                    contentDescription = pitchLabel
                     stateDescription = pitchDisplayText
                 }
             )
@@ -450,7 +462,7 @@ fun SettingsScreenContent(
                 enabled = isTtsReady,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Play Sample")
+                Text(stringResource(R.string.play_sample))
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -459,11 +471,17 @@ fun SettingsScreenContent(
         Spacer(modifier = Modifier.height(24.dp))
 
         val bitrateValues = listOf(48000, 64000, 128000, 192000, 256000)
-        val bitrateLabels = listOf("Lowest", "Low", "Typical", "High", "Highest")
+        val bitrateLabels = listOf(
+            stringResource(R.string.bitrate_lowest),
+            stringResource(R.string.bitrate_low),
+            stringResource(R.string.bitrate_typical),
+            stringResource(R.string.bitrate_high),
+            stringResource(R.string.bitrate_highest)
+        )
         val currentIndex = bitrateValues.indexOf(bitrate).coerceAtLeast(0)
 
         Text(
-            text = "Encoder Bitrate: ${bitrateLabels[currentIndex]} (${bitrate / 1000} kbps)",
+            text = stringResource(R.string.encoder_bitrate_label, bitrateLabels[currentIndex], bitrate / 1000),
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.clearAndSetSemantics { }
         )
@@ -488,8 +506,8 @@ fun SettingsScreenContent(
     if (showEngineSelection) {
         val engineOptions = engines.map { SelectionOption(it.id, it.label) }
         SearchableSelectionDialog(
-            title = "Select Engine",
-            searchLabel = "Search engines",
+            title = stringResource(R.string.select_engine),
+            searchLabel = stringResource(R.string.search_engines),
             currentSelectedId = currentEngineId,
             options = engineOptions,
             onDismissRequest = { showEngineSelection = false },
@@ -504,8 +522,8 @@ fun SettingsScreenContent(
     if (showVoiceSelection) {
         val voiceOptions = voices.map { SelectionOption(it.id, it.displayName) }
         SearchableSelectionDialog(
-            title = "Select Voice",
-            searchLabel = "Search voices",
+            title = stringResource(R.string.select_voice),
+            searchLabel = stringResource(R.string.search_voices),
             currentSelectedId = currentVoiceId,
             options = voiceOptions,
             onDismissRequest = { showVoiceSelection = false },

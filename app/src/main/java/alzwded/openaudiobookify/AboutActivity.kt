@@ -38,6 +38,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
@@ -63,10 +64,10 @@ fun AboutScreen(onBackClick: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("About OpenAudioBookify") },
+                title = { Text(stringResource(R.string.about_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -85,8 +86,9 @@ fun AboutScreen(onBackClick: () -> Unit) {
                 onClick = { uriHandler.openUri("https://github.com/alzwded/OpenAudioBookify") },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("GitHub Repository", modifier = Modifier.semantics {
-                    contentDescription = "Open GitHub Repository to view code or report issues"
+                val githubRepoDesc = stringResource(R.string.github_repo_desc)
+                Text(stringResource(R.string.github_repo), modifier = Modifier.semantics {
+                    contentDescription = githubRepoDesc
                 })
             }
             
@@ -96,38 +98,15 @@ fun AboutScreen(onBackClick: () -> Unit) {
                 onClick = { uriHandler.openUri("mailto:openaudiobookifyapp@gmail.com") },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Contact Us")
+                Text(stringResource(R.string.contact_us))
             }
 
             Spacer(modifier = Modifier.height(32.dp))
-            Text("License", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.license), style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = """
-                    Copyright (c) 2026, Vlad Mesco
-                    All rights reserved.
-
-                    Redistribution and use in source and binary forms, with or without
-                    modification, are permitted provided that the following conditions are met:
-
-                    1. Redistributions of source code must retain the above copyright notice, this
-                       list of conditions and the following disclaimer.
-                    2. Redistributions in binary form must reproduce the above copyright notice,
-                       this list of conditions and the following disclaimer in the documentation
-                       and/or other materials provided with the distribution.
-
-                    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-                    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-                    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-                    DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-                    ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-                    (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-                    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-                    ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-                    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-                    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-                """.trimIndent(),
+                text = stringResource(R.string.license_text).trimIndent(),
                 style = MaterialTheme.typography.bodySmall,
                 fontFamily = FontFamily.Monospace
             )

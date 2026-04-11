@@ -1,2 +1,109 @@
 <resources>
+    <string name="about">About</string>
+    <string name="settings">Settings</string>
+    <string name="notification_permission_required">Notification permission required for background processing</string>
+    <string name="processing_started">Processing started in background</string>
+    <string name="error_no_output_folder">No output folder selected</string>
+    <string name="error_no_books_added">Add some books first</string>
+    <string name="error_unknown">Unknown error</string>
+    <string name="add_books">Add Books</string>
+    <string name="clear_books">Clear Books</string>
+    <string name="set_output_folder">Set Output Folder</string>
+    <string name="output_set">Output Set</string>
+    <string name="books_to_process">Books to process:</string>
+    <string name="status_queued">Queued</string>
+    <string name="status_processing">Processing (Chunk %1$d)</string>
+    <string name="status_finished">Finished</string>
+    <string name="remove_book_desc">Remove %1$s</string>
+    <string name="cancel_processing">Cancel Processing</string>
+    <string name="start_processing">Start Processing</string>
+
+    <string name="about_title">About OpenAudioBookify</string>
+    <string name="back">Back</string>
+    <string name="github_repo">GitHub Repository</string>
+    <string name="github_repo_desc">Open GitHub Repository to view code or report issues</string>
+    <string name="contact_us">Contact Us</string>
+    <string name="license">License</string>
+    <string name="license_text" translatable="false">
+        Copyright &#169; 2026, Vlad Mesco
+        All rights reserved.
+
+        Redistribution and use in source and binary forms, with or without
+        modification, are permitted provided that the following conditions are met:
+
+        1. Redistributions of source code must retain the above copyright notice, this
+           list of conditions and the following disclaimer.
+        2. Redistributions in binary form must reproduce the above copyright notice,
+           this list of conditions and the following disclaimer in the documentation
+           and/or other materials provided with the distribution.
+
+        THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+        ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+        WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+        DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+        ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+        (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+        LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+        ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+        (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+        SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+    </string>
+
+    <string name="initializing_tts">Initializing TTS Engine…</string>
+    <string name="tts_ready_announce">Ready</string>
+    <string name="warning">Warning</string>
+    <string name="no_tts_engines_found">No Text-To-Speech engines found. Please install a TTS engine such as \'Speech Recognition and Synthesis by Google\' or \'eSpeak\' to configure these settings.</string>
+    <string name="tts_engine">TTS Engine</string>
+    <string name="select_engine">Select Engine</string>
+    <string name="tts_voice">TTS Voice</string>
+    <string name="no_voices_available">No voices available for this engine</string>
+    <string name="select_voice_hint">Select a voice</string>
+    <string name="select_voice">Select Voice</string>
+    <string name="speech_rate_label">Speech Rate: %1$s</string>
+    <string name="reset">Reset</string>
+    <string name="speech_rate">Speech Rate</string>
+    <string name="reset_speech_rate">Reset Speech Rate</string>
+    <string name="pitch_label">Pitch: %1$s</string>
+    <string name="reset_pitch">Reset Pitch</string>
+    <string name="pitch">Pitch</string>
+    <string name="play_sample">Play Sample</string>
+    <string name="encoder_bitrate_label">Encoder Bitrate: %1$s (%2$d kbps)</string>
+    <string name="encoder_bitrate">Encoder Bitrate</string>
+    <string name="search_engines">Search engines</string>
+    <string name="search_voices">Search voices</string>
+    <string name="bitrate_lowest">Lowest</string>
+    <string name="bitrate_low">Low</string>
+    <string name="bitrate_typical">Typical</string>
+    <string name="bitrate_high">High</string>
+    <string name="bitrate_highest">Highest</string>
+
+    <string name="no_options_found">No options found</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="initializing_engine">Initializing engine…</string>
+    <string name="error_no_output_dir_service">Error: No output directory selected.</string>
+    <string name="queued_additional_books">Queued additional books. Total pending: %1$d</string>
+    <string name="failed_to_init_tts">Failed to initialize TTS. Please install a TTS engine.</string>
+    <string name="generating_audiobook">Generating Audiobook: %1$s…</string>
+    <string name="failed_with_error">Failed: %1$s</string>
+    <string name="error_reading_format">Error reading format for: %1$s</string>
+    <string name="all_success">All audiobooks generated successfully.</string>
+    <string name="completed_with_errors">Completed with %1$d errors: %2$s</string>
+    <string name="notification_channel_name">Audiobook Processing</string>
+    <string name="view_queue">View Queue</string>
+
+    <string name="error_mediacodec">MediaCodec error on chunk %1$d.</string>
+    <string name="error_tts_failed">TTS engine failed to process text.</string>
+    <string name="error_tts_exception">TTS error: %1$s</string>
+    <string name="error_merging">Error merging final audiobook.</string>
+    <string name="error_saf_write">Failed to write the final audiobook to the selected folder.</string>
+
+    <string name="tts_image_description">Image description: %1$s</string>
+    <string name="tts_image_title">Image title: %1$s</string>
+    <string name="tts_image_no_description">Image, no description available</string>
+    <string name="tts_heading">Heading: %1$s</string>
+    <string name="tts_list">List:</string>
+    <string name="tts_list_item">List item %1$d: %2$s</string>
+    <string name="tts_table">Table:</string>
+    <string name="tts_table_row">Row %1$d:</string>
 </resources>

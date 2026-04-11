@@ -1,0 +1,85 @@
+<resources>
+    <string name="about">Despre</string>
+    <string name="settings">Setări</string>
+    <string name="notification_permission_required">Aplicația are nevoie de permisiunea de a afișa notificări pentru procesarea datelor în fundal</string>
+    <string name="processing_started">Procesarea a început în fundal</string>
+    <string name="error_no_output_folder">Nu a fost selectat niciun dosar pentru datele de ieșire</string>
+    <string name="error_no_books_added">Trebuie să adăugați cărți</string>
+    <string name="error_unknown">Eroare necunoscută</string>
+    <string name="add_books">Adaugă cărți</string>
+    <string name="clear_books">Elimină cărțile</string>
+    <string name="set_output_folder">Alege dosarul pentru datele de ieșire</string>
+    <string name="output_set">Dosar selectat</string>
+    <string name="books_to_process">Cărți de procesat:</string>
+    <string name="status_queued">În așteptare</string>
+    <string name="status_processing">Se procesează (Partea %1$d)</string>
+    <string name="status_finished">Finalizat</string>
+    <string name="remove_book_desc">Elimină %1$s</string>
+    <string name="cancel_processing">Anulează procesarea</string>
+    <string name="start_processing">Începe procesarea</string>
+
+    <string name="about_title">Despre OpenAudioBookify</string>
+    <string name="back">Înapoi</string>
+    <string name="github_repo">GitHub Repository</string>
+    <string name="github_repo_desc">Deschide GitHub pentru a vedea codul sau pentru a raporta probleme</string>
+    <string name="contact_us">Contactați-ne</string>
+    <string name="license">Licență</string>
+
+    <string name="initializing_tts">Se inițializează motorul TTS…</string>
+    <string name="tts_ready_announce">Disponibil</string>
+    <string name="warning">Avertisment</string>
+    <string name="no_tts_engines_found">Nu a fost găsit niciun motor de redare a vocii. Vă rugăm să instalați un motor TTS, cum ar fi „Speech Recognition and Synthesis by Google” sau „eSpeak”.</string>
+    <string name="tts_engine">Motor TTS</string>
+    <string name="select_engine">Selectați motorul</string>
+    <string name="tts_voice">Voce TTS</string>
+    <string name="no_voices_available">Nu există voci disponibile pentru acest motor</string>
+    <string name="select_voice_hint">Selectați o voce</string>
+    <string name="select_voice">Selectați vocea</string>
+    <string name="speech_rate_label">Viteza de vorbire: %1$s</string>
+    <string name="reset">Resetează</string>
+    <string name="speech_rate">Rata de vorbire</string>
+    <string name="reset_speech_rate">Resetează viteza de vorbire</string>
+    <string name="pitch_label">Tonalitate: %1$s</string>
+    <string name="reset_pitch">Resetează tonalitatea</string>
+    <string name="pitch">Tonalitate</string>
+    <string name="play_sample">Testează vocea</string>
+    <string name="encoder_bitrate_label">Calitate codor: %1$s (%2$d kbps)</string>
+    <string name="encoder_bitrate">Calitate codor</string>
+    <string name="search_engines">Caută motor</string>
+    <string name="search_voices">Caută voce</string>
+    <string name="bitrate_lowest">Cea mai mică</string>
+    <string name="bitrate_low">Mică</string>
+    <string name="bitrate_typical">Tipică</string>
+    <string name="bitrate_high">Mare</string>
+    <string name="bitrate_highest">Cea mai mare</string>
+
+    <string name="no_options_found">Nu există opțiuni</string>
+    <string name="cancel">Anulează</string>
+
+    <string name="initializing_engine">Se inițializează motorul de redare a vocii…</string>
+    <string name="error_no_output_dir_service">Eroare: Nu a fost selectat niciun dosar pentru datele de ieșire.</string>
+    <string name="queued_additional_books">Au fost adăugate cărți suplimentare în coadă. Total în așteptare: %1$d</string>
+    <string name="failed_to_init_tts">Inițializarea motorului TTS a eșuat. Vă rugăm să instalați un motor TTS.</string>
+    <string name="generating_audiobook">Se generează audiobook-ul: %1$s…</string>
+    <string name="failed_with_error">Eșuat: %1$s</string>
+    <string name="error_reading_format">Eroare la citirea formatului pentru: %1$s</string>
+    <string name="all_success">Toate audiobook-urile au fost generate cu succes.</string>
+    <string name="completed_with_errors">Finalizat cu %1$d erori: %2$s</string>
+    <string name="notification_channel_name">Se procesează</string>
+    <string name="view_queue">Vezi coada</string>
+
+    <string name="error_mediacodec">Eroare codare a părții %1$d.</string>
+    <string name="error_tts_failed">Motorul TTS nu a reușit să proceseze textul.</string>
+    <string name="error_tts_exception">Eroare TTS: %1$s</string>
+    <string name="error_merging">A apărut o eroare la pregătirea audiobook-ului final.</string>
+    <string name="error_saf_write">Nu s-a putut scrie audiobook-ul final în dosarul selectat.</string>
+
+    <string name="tts_image_description">Imagine: %1$s</string>
+    <string name="tts_image_title">Imagine: %1$s</string>
+    <string name="tts_image_no_description">Imagine, nicio descriere disponibilă</string>
+    <string name="tts_heading">Titlu: %1$s</string>
+    <string name="tts_list">Listă:</string>
+    <string name="tts_list_item">Itemul %1$d: %2$s</string>
+    <string name="tts_table">Tabel:</string>
+    <string name="tts_table_row">Rândul %1$d:</string>
+</resources>

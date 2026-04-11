@@ -72,8 +72,9 @@ fun OpenAudioBookifyTheme(
     )
 }
 
-@Preview(name = "Galaxy S24 Ultra", device = "spec:width=1440px,height=3120px,dpi=500", showBackground = true)
-@Preview(name = "7 inch Tablet", device = "spec:width=1200px,height=1920px,dpi=320", showBackground = true)
-@Preview(name = "10 inch Tablet", device = "spec:width=2560px,height=1600px,dpi=320", showBackground = true)
+@Preview(name = "Galaxy S24 Ultra (en)", device = "spec:width=1440px,height=3120px,dpi=500", showBackground = true, locale = "en")
+@Preview(name = "Galaxy S24 Ultra (ro)", device = "spec:width=1440px,height=3120px,dpi=500", showBackground = true, locale = "ro")
+@Preview(name = "Tablet 7 inch", device = "spec:width=1200px,height=1920px,dpi=320", showBackground = true)
+@Preview(name = "Tablet 10 inch", device = "spec:width=2560px,height=1600px,dpi=320", showBackground = true)
 annotation class DevicesPreview
 

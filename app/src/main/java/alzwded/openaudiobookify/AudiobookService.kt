@@ -143,11 +143,11 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                     startForeground(
                         NOTIFICATION_ID,
-                        buildNotification("Initializing engine..."),
+                        buildNotification(getString(R.string.initializing_engine)),
                         ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
                     )
                 } else {
-                    startForeground(NOTIFICATION_ID, buildNotification("Initializing engine..."))
+                    startForeground(NOTIFICATION_ID, buildNotification(getString(R.string.initializing_engine)))
                 }
 
                 // Extract output directory
@@ -162,7 +162,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                     outputDirUri = outUri
                 } else {
                     Log.e(TAG, "No output directory URI provided. Aborting.")
-                    updateNotification("Error: No output directory selected.")
+                    updateNotification(getString(R.string.error_no_output_dir_service))
                     shutdownService()
                     return START_NOT_STICKY
                 }
@@ -198,7 +198,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                             tts = TextToSpeech(this, this, settingsHelper.ttsEngine)
                         } catch (e: Exception) {
                             Log.e(TAG, "Failed to instantiate TextToSpeech engine", e)
-                            updateNotification("TTS Error: No TTS engine installed or accessible.")
+                            updateNotification(getString(R.string.failed_to_init_tts))
                             shutdownService()
                             return START_NOT_STICKY
                         }
@@ -207,7 +207,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                         processNextBook()
                     } else {
                         Log.i(TAG, "Pipeline exists or TTS initializing, enqueuing only")
-                        updateNotification("Queued additional books. Total pending: ${bookQueue.size}")
+                        updateNotification(getString(R.string.queued_additional_books, bookQueue.size))
                     }
                 } else if (bookQueue.isEmpty() && pipeline == null) {
                     Log.w(TAG, "Nothing to do, shuting down")
@@ -251,7 +251,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
             tts?.setPitch(settingsHelper.pitch)
             processNextBook()
         } else {
-            updateNotification("Failed to initialize TTS. Please install a TTS engine.")
+            updateNotification(getString(R.string.failed_to_init_tts))
             shutdownService()
         }
     }
@@ -279,7 +279,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
         val book = Book(cleanBookName, nextBook.uri)
 
         updateBookState(nextBook.uri, BookStatus.PROCESSING, 0)
-        updateNotification("Generating Audiobook: $cleanBookName...")
+        updateNotification(getString(R.string.generating_audiobook, cleanBookName))
 
         serviceScope.launch(Dispatchers.IO) {
             try {
@@ -300,7 +300,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                         onError = { errorMsg ->
                             serviceScope.launch(Dispatchers.Main) {
                                 failedBooks.add(cleanBookName)
-                                updateNotification("Failed: $errorMsg")
+                                updateNotification(getString(R.string.failed_with_error, errorMsg))
                                 pipeline = null
                                 updateBookState(nextBook.uri, BookStatus.FINISHED)
                                 processNextBook() // Move on to the next book or finish
@@ -318,7 +318,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                 Log.e(TAG, "Failed to start pipeline, ${e.message}")
                 withContext(Dispatchers.Main) {
                     failedBooks.add(cleanBookName)
-                    updateNotification("Error reading format for: $cleanBookName")
+                    updateNotification(getString(R.string.error_reading_format, cleanBookName))
                     pipeline = null
                     processNextBook()
                 }
@@ -362,10 +362,10 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
         val manager = getSystemService(NotificationManager::class.java)
         
         val contentText = if (failedBooks.isEmpty()) {
-            "All audiobooks generated successfully."
+            getString(R.string.all_success)
         } else {
             val names = failedBooks.joinToString(", ")
-            "Completed with ${failedBooks.size} errors: $names"
+            getString(R.string.completed_with_errors, failedBooks.size, names)
         }
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
@@ -399,15 +399,15 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setOngoing(true)
             .setContentIntent(viewPendingIntent)
-            .addAction(android.R.drawable.ic_menu_view, "View Queue", viewPendingIntent)
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Cancel", cancelPendingIntent)
+            .addAction(android.R.drawable.ic_menu_view, getString(R.string.view_queue), viewPendingIntent)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, getString(R.string.cancel), cancelPendingIntent)
             .build()
     }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                CHANNEL_ID, "Audiobook Processing", NotificationManager.IMPORTANCE_LOW
+                CHANNEL_ID, getString(R.string.notification_channel_name), NotificationManager.IMPORTANCE_LOW
             )
             getSystemService(NotificationManager::class.java)?.createNotificationChannel(channel)
         }

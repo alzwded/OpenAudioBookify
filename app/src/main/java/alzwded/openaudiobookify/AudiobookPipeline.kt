@@ -155,7 +155,7 @@ class AudiobookPipeline(
             ) {
                 Log.e(TAG, "Chunk MediaCodec Error on chunk $chunkIndex: ${exportException.message}")
                 cleanup()
-                onError("MediaCodec error on chunk $chunkIndex.")
+                onError(context.getString(R.string.error_mediacodec, chunkIndex))
             }
         })
     }
@@ -200,13 +200,13 @@ class AudiobookPipeline(
                 Log.e(TAG, "TTS Error: synthesizeToFile returned ERROR for chunk $chunkIndex")
                 isCancelled = true
                 cleanup()
-                onError("TTS engine failed to process text.")
+                onError(context.getString(R.string.error_tts_failed))
             }
         } catch (e: Exception) {
             Log.e(TAG, "Exception during TTS synthesizeToFile", e)
             isCancelled = true
             cleanup()
-            onError("TTS error: ${e.localizedMessage}")
+            onError(context.getString(R.string.error_tts_exception, e.localizedMessage ?: "Unknown error"))
         }
     }
 
@@ -233,7 +233,7 @@ class AudiobookPipeline(
                 Log.e(TAG, "TTS Error on chunk $chunkIndex: $errorCode")
                 isCancelled = true
                 cleanup()
-                onError("TTS engine error during synthesis (code $errorCode).")
+                onError(context.getString(R.string.error_tts_exception, "Error code $errorCode"))
             }
         })
     }
@@ -278,7 +278,7 @@ class AudiobookPipeline(
                         onPipelineComplete()
                     } else {
                         cleanup(finalTempFile)
-                        onError("Failed to write the final audiobook to the selected folder.")
+                        onError(context.getString(R.string.error_saf_write))
                     }
                 } else {
                     cleanup(finalTempFile)
@@ -292,7 +292,7 @@ class AudiobookPipeline(
             ) {
                 Log.e(TAG, "Error merging final audiobook: ${exportException.message}")
                 cleanup(finalTempFile)
-                onError("Error merging final audiobook.")
+                onError(context.getString(R.string.error_merging))
             }
         })
 

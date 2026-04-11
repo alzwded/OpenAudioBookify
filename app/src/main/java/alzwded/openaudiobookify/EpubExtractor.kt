@@ -25,6 +25,7 @@
 
 package alzwded.openaudiobookify
 
+import android.content.Context
 import android.util.Log
 import java.io.File
 import java.util.zip.ZipFile
@@ -36,6 +37,7 @@ private const val TAG = "OAB_EPUB_EXTRACTOR"
  * across multiple internal HTML spine files.
  */
 fun extractEpubTextLazily(
+    context: Context,
     epubFile: File,
     spineList: List<String>,
     manifestMap: Map<String, String>
@@ -53,7 +55,7 @@ fun extractEpubTextLazily(
                     Log.i(TAG, "Next zip entry")
                     val htmlContent = zip.getInputStream(zipEntry).bufferedReader().use { it.readText() }
                     // Yield raw ballpark chunks to the aggregate stream
-                    yieldAll(ballparkHtmlChunks(htmlContent))
+                    yieldAll(ballparkHtmlChunks(context, htmlContent))
                 }
             }
         }

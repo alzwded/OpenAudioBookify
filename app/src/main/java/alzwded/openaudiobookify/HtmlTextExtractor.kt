@@ -25,6 +25,7 @@
 
 package alzwded.openaudiobookify
 
+import android.content.Context
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
@@ -33,13 +34,13 @@ import org.jsoup.nodes.TextNode
 /**
  * High-level entry point for single HTML files.
  */
-fun extractHtmlTextLazily(htmlContent: String): Sequence<String> =
-    ballparkHtmlChunks(htmlContent).chunkByPunctuation()
+fun extractHtmlTextLazily(context: Context, htmlContent: String): Sequence<String> =
+    ballparkHtmlChunks(context, htmlContent).chunkByPunctuation()
 
 /**
  * Extracts text from an HTML document lazily using a generator-consumer pattern.
  */
-fun ballparkHtmlChunks(htmlContent: String): Sequence<String> = sequence {
+fun ballparkHtmlChunks(context: Context, htmlContent: String): Sequence<String> = sequence {
     val document = Jsoup.parse(htmlContent)
     val body = document.body() ?: return@sequence
 
@@ -69,17 +70,17 @@ fun ballparkHtmlChunks(htmlContent: String): Sequence<String> = sequence {
                         val alt = node.attr("alt").trim()
                         val title = node.attr("title").trim()
                         if (alt.isNotEmpty()) {
-                            yield(" [Image description: $alt] ")
+                            yield(" [" + context.getString(R.string.tts_image_description, alt) + "] ")
                         } else if (title.isNotEmpty()) {
-                            yield(" [Image title: $title] ")
+                            yield(" [" + context.getString(R.string.tts_image_title, title) + "] ")
                         } else {
-                            yield(" [Image, no description available] ")
+                            yield(" [" + context.getString(R.string.tts_image_no_description) + "] ")
                         }
                     }
                     // just grab flattened text from headings and drop a double
                     // line feed, as they probably don't have punctuation
                     tag.matches(Regex("h[1-6]")) -> {
-                        yield(node.text() + "\n\n")
+                        yield(context.getString(R.string.tts_heading, node.text()) + "\n\n")
                     }
                     // everything else:
                     else -> {

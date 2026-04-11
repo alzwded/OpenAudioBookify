@@ -57,6 +57,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -281,7 +282,7 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
         onResult = { isGranted ->
             hasNotificationPermission = isGranted
             if (!isGranted) {
-                Toast.makeText(context, "Notification permission required for background processing", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.notification_permission_required), Toast.LENGTH_SHORT).show()
             }
         }
     )
@@ -334,7 +335,7 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
         }
 
         ContextCompat.startForegroundService(context, intent)
-        Toast.makeText(context, "Processing started in background", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.processing_started), Toast.LENGTH_SHORT).show()
     }
 
     Scaffold(
@@ -347,14 +348,14 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
                             context.startActivity(Intent(context, AboutActivity::class.java))
                         }
                     ) {
-                        Icon(Icons.Default.Info, contentDescription = "About")
+                        Icon(Icons.Default.Info, contentDescription = stringResource(R.string.about))
                     }
                     IconButton(
                         onClick = {
                             context.startActivity(Intent(context, SettingsActivity::class.java))
                         }
                     ) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
                     }
                 }
             )
@@ -379,9 +380,9 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
                     }
                 } else {
                     val message = when {
-                        outputDirUri == null -> "No output folder selected"
-                        selectedBooks.isEmpty() -> "Add some books first"
-                        else -> "Unknown error"
+                        outputDirUri == null -> context.getString(R.string.error_no_output_folder)
+                        selectedBooks.isEmpty() -> context.getString(R.string.error_no_books_added)
+                        else -> context.getString(R.string.error_unknown)
                     }
                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                 }
@@ -423,7 +424,7 @@ fun OpenAudioBookifyContent(
                     modifier = Modifier.weight(1f),
                     enabled = !isProcessing // Disable while processing
                 ) {
-                    Text("Add Books")
+                    Text(stringResource(R.string.add_books))
                 }
 
                 if (selectedBooks.isNotEmpty()) {
@@ -432,7 +433,7 @@ fun OpenAudioBookifyContent(
                         onClick = onClearBooksClick,
                         enabled = !isProcessing
                     ) {
-                        Icon(Icons.Default.Close, contentDescription = "Clear Books")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.clear_books))
                     }
                 }
             }
@@ -444,13 +445,13 @@ fun OpenAudioBookifyContent(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isProcessing // Disable while processing
             ) {
-                Text(if (outputDirUri == null) "Set Output Folder" else "Output Set")
+                Text(if (outputDirUri == null) stringResource(R.string.set_output_folder) else stringResource(R.string.output_set))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Books to process:",
+                text = stringResource(R.string.books_to_process),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.semantics { heading() })
 
@@ -470,9 +471,9 @@ fun OpenAudioBookifyContent(
                                 maxLines = 1
                             )
                             when (book.status) {
-                                BookStatus.QUEUED -> Text("Queued")
-                                BookStatus.PROCESSING -> Text("Processing (Chunk ${book.currentChunk})")
-                                BookStatus.FINISHED -> Text("Finished")
+                                BookStatus.QUEUED -> Text(stringResource(R.string.status_queued))
+                                BookStatus.PROCESSING -> Text(stringResource(R.string.status_processing, book.currentChunk))
+                                BookStatus.FINISHED -> Text(stringResource(R.string.status_finished))
                             }
                         }
                     }
@@ -497,7 +498,7 @@ fun OpenAudioBookifyContent(
                                 onClick = { onRemoveBookClick(book) },
                                 enabled = !isProcessing
                             ) {
-                                Icon(Icons.Default.Close, contentDescription = "Remove ${book.name}")
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.remove_book_desc, book.name))
                             }
                         }
                     }
@@ -510,14 +511,14 @@ fun OpenAudioBookifyContent(
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Cancel Processing")
+                    Text(stringResource(R.string.cancel_processing))
                 }
             } else {
                 Button(
                     onClick = onStartProcessingClick,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Start Processing")
+                    Text(stringResource(R.string.start_processing))
                 }
             }
         }

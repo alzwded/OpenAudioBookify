@@ -209,7 +209,7 @@ class MarkdownBookTextProvider(
                             flushParagraph()
                             inTable = true
                             tableRowCount = 1
-                            yield("table:")
+                            yield(context.getString(R.string.tts_table))
                         }
                         // Skip the markdown table structure separator line (e.g. |---|---|)
                         if (cleanLine.matches(Regex("^\\|[\\s\\-:]+\\|.*"))) {
@@ -220,7 +220,7 @@ class MarkdownBookTextProvider(
                             cleanMarkdownFormatting(it.trim()) 
                         }
                         // Columns are separated by two new lines to force TTS to pause
-                        val rowText = "row $tableRowCount:\n\n" + columns.joinToString("\n\n")
+                        val rowText = context.getString(R.string.tts_table_row, tableRowCount) + "\n\n" + columns.joinToString("\n\n")
                         yield(rowText)
                         tableRowCount++
                         
@@ -236,7 +236,7 @@ class MarkdownBookTextProvider(
                         flushParagraph()
                         inList = false
                         val headingText = cleanMarkdownFormatting(headingMatch.groupValues[1])
-                        yield("heading: $headingText")
+                        yield(context.getString(R.string.tts_heading, headingText))
                         continue
                     }
 
@@ -248,13 +248,13 @@ class MarkdownBookTextProvider(
                         if (!inList) {
                             inList = true
                             listItemCount = 1
-                            yield("list:")
+                            yield(context.getString(R.string.tts_list))
                         } else {
                             listItemCount++
                         }
                         
                         val itemText = cleanMarkdownFormatting(listMatch.groupValues[2])
-                        yield("list item $listItemCount: $itemText")
+                        yield(context.getString(R.string.tts_list_item, listItemCount, itemText))
                         continue
                     }
 
@@ -285,7 +285,7 @@ class MarkdownBookTextProvider(
         
         // Images: ![alt](url) -> Image description: alt
         cleanText = cleanText.replace(Regex("!\\[(.*?)\\]\\((.*?)\\)")) {
-            "Image description: ${it.groupValues[1]}"
+            context.getString(R.string.tts_image_description, it.groupValues[1])
         }
         
         // Links: [text](url) -> text url
@@ -326,7 +326,7 @@ class EpubBookTextProvider(
             // Use the existing Epub parsing logic
             val metadata = EpubMetadataParser.parse(tempFile)
             
-            yieldAll(extractEpubTextLazily(tempFile, metadata.spineList, metadata.manifestMap))
+            yieldAll(extractEpubTextLazily(context, tempFile, metadata.spineList, metadata.manifestMap))
         } finally {
             if (tempFile.exists()) {
                 Log.i("EPUB_PROVIDER", "Deleting temp file ${tempFile.absolutePath}")
@@ -342,7 +342,7 @@ class HtmlBookTextProvider(private val context: Context, private val book: Book)
     override fun extractText(): Sequence<String> = sequence {
         context.contentResolver.openInputStream(book.uri)?.use { inputStream ->
             val htmlContent = inputStream.bufferedReader().use { it.readText() }
-            yieldAll(extractHtmlTextLazily(htmlContent))
+            yieldAll(extractHtmlTextLazily(context, htmlContent))
         }
     }
 }

@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
 
 @DevicesPreview
@@ -12,8 +13,8 @@ import androidx.compose.ui.Modifier
 fun SelectionDialogPreview() {
 	OpenAudioBookifyTheme {
         SearchableSelectionDialog(
-			title = "Select Voice",
-			searchLabel = "Search voices",
+			title = stringResource(R.string.select_voice),
+			searchLabel = stringResource(R.string.search_voices),
             currentSelectedId = "en-gb-x-fis",
             options = listOf(
                 SelectionOption("en-us-x-sfg", "en-us-x-sfg - English (United States) local"),
@@ -34,7 +35,7 @@ fun SettingsDefaultPreview() {
             topBar = {
                 @OptIn(ExperimentalMaterial3Api::class)
                 TopAppBar(
-                    title = { Text("Settings") },
+                    title = { Text(stringResource(R.string.settings)) },
                     navigationIcon = {
                         IconButton(onClick = {}) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
