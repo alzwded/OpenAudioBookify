@@ -52,6 +52,7 @@ fun DefaultPreview() {
                 onClearBooksClick = {},
                 onRemoveBookClick = {},
                 onSetOutputFolderClick = {},
+                onClearOutputFolderClick = {},
                 onStartProcessingClick = {},
                 onCancelProcessingClick = {}
             )
@@ -97,6 +98,7 @@ fun IsProcessingPreview() {
                 onClearBooksClick = {},
                 onRemoveBookClick = {},
                 onSetOutputFolderClick = {},
+                onClearOutputFolderClick = {},
                 onStartProcessingClick = {},
                 onCancelProcessingClick = {}
             )

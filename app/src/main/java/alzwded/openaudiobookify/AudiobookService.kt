@@ -161,10 +161,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                 if (outUri != null) {
                     outputDirUri = outUri
                 } else {
-                    Log.e(TAG, "No output directory URI provided. Aborting.")
-                    updateNotification(getString(R.string.error_no_output_dir_service))
-                    shutdownService()
-                    return START_NOT_STICKY
+                    Log.i(TAG, "No output directory URI provided, will use default Audiobooks media directory")
                 }
 
                 // Retrieve the ArrayList of URIs depending on the Android version

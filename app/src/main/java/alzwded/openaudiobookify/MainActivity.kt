@@ -174,6 +174,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _outputDirUri.value = uri
     }
 
+    fun clearOutputUri() {
+        _outputDirUri.value = null
+    }
+
     fun cancelWork() {
         val intent = Intent(getApplication(), AudiobookService::class.java).apply {
             action = AudiobookService.ACTION_CANCEL
@@ -374,38 +378,13 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
                 try {
                     dirPickerLauncher.launch(null)
                 } catch (e: android.content.ActivityNotFoundException) {
-                    // user might have deleted the Files app to "debloat" their phone
-                    // fallback to Downloads or App Dir
-                    Log.e(TAG, "DocumentsUI missing, falling back to local folders", e)
-                    
-                    // Fallback 1: System Downloads folder
-                    val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(
-                        android.os.Environment.DIRECTORY_DOWNLOADS
-                    )
-                    
-                    // Note: On Android 10, raw file writing to Downloads might fail without 
-                    // requestLegacyExternalStorage="true" in the Manifest, so we check if it's writable.
-                    if (downloadsDir != null && downloadsDir.exists() && downloadsDir.canWrite()) {
-                        viewModel.setOutputDirUri(Uri.fromFile(downloadsDir))
-                        Toast.makeText(context, context.getString(R.string.using_downloads), Toast.LENGTH_LONG).show()
-                    } else {
-                        // Fallback 2: App Data folder
-                        val appDataDir = context.getExternalFilesDir(null)
-                        if (appDataDir != null) {
-                            viewModel.setOutputDirUri(Uri.fromFile(appDataDir))
-                            Toast.makeText(
-                                context, 
-                                context.getString(R.string.using_app_private_dir, context.packageName),
-                                Toast.LENGTH_LONG
-                            ).show()
-                        } else {
-                            Toast.makeText(context, context.getString(R.string.err_no_writeable_dir), Toast.LENGTH_LONG).show()
-                        }
-                    }
+                    Log.e(TAG, "DocumentsUI missing")
+                    Toast.makeText(context, context.getString(R.string.error_missing_documentsui), Toast.LENGTH_LONG).show()
                 }
             },
+            onClearOutputFolderClick = { viewModel.clearOutputUri() },
             onStartProcessingClick = {
-                if (outputDirUri != null && selectedBooks.isNotEmpty()) {
+                if (selectedBooks.isNotEmpty()) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission) {
                         permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                     } else {
@@ -413,7 +392,6 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
                     }
                 } else {
                     val message = when {
-                        outputDirUri == null -> context.getString(R.string.error_no_output_folder)
                         selectedBooks.isEmpty() -> context.getString(R.string.error_no_books_added)
                         else -> context.getString(R.string.error_unknown)
                     }
@@ -436,6 +414,7 @@ fun OpenAudioBookifyContent(
     onClearBooksClick: () -> Unit,
     onRemoveBookClick: (Book) -> Unit,
     onSetOutputFolderClick: () -> Unit,
+    onClearOutputFolderClick: () -> Unit,
     onStartProcessingClick: () -> Unit,
     onCancelProcessingClick: () -> Unit
 ) {
@@ -473,12 +452,27 @@ fun OpenAudioBookifyContent(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Button(
-                onClick = onSetOutputFolderClick,
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !isProcessing // Disable while processing
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(if (outputDirUri == null) stringResource(R.string.set_output_folder) else stringResource(R.string.output_set))
+                Button(
+                    onClick = onSetOutputFolderClick,
+                    modifier = Modifier.weight(1f),
+                    enabled = !isProcessing // Disable while processing
+                ) {
+                    Text(if (outputDirUri == null) stringResource(R.string.set_output_folder) else stringResource(R.string.output_set))
+                }
+
+                if (outputDirUri != null) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(
+                        onClick = onClearOutputFolderClick,
+                        enabled = !isProcessing
+                    ) {
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.clear_books))
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

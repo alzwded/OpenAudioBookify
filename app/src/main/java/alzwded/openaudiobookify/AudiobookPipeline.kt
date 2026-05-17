@@ -56,9 +56,13 @@
 package alzwded.openaudiobookify
 
 import android.content.Context
+import android.content.ContentValues
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
@@ -249,7 +253,7 @@ class AudiobookPipeline(
     }
 
     private fun mergeChunksAndExport() {
-        if (encodedChunkFiles.isEmpty() || outputDirUri == null) {
+        if (encodedChunkFiles.isEmpty()) {
             Log.w(TAG, "mergeChunksAndExport: nothing to do")
             cleanup()
             onPipelineComplete()
@@ -273,7 +277,7 @@ class AudiobookPipeline(
             override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                 Log.i(TAG, "Final m4a completed")
                 if (!isCancelled) {
-                    if (writeToSaf(finalTempFile)) {
+                    if (writeToOutputDir(finalTempFile)) {
                         cleanup(finalTempFile)
                         onPipelineComplete()
                     } else {
@@ -303,6 +307,59 @@ class AudiobookPipeline(
         }
     }
 
+    private fun writeToMediaStore(finalTempFile: File): Boolean {
+        Log.i(TAG, "Exporting to MediaStore")
+        
+        val safeName = bookName.replace(Regex("[\\\\/:*?\"<>|]"), "_")
+        val fileName = "$safeName.m4a"
+    
+        val contentValues = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(MediaStore.MediaColumns.MIME_TYPE, "audio/mp4")
+            
+            // On API 29+, we can cleanly organize this into a subfolder
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // Environment.DIRECTORY_AUDIOBOOKS is API 29+
+                put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_AUDIOBOOKS}/OpenAudiobookify")
+                // Optional: Mark as pending while we write to prevent other apps from reading a partial file
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
+        }
+    
+        val resolver = context.contentResolver
+        val audioCollection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+        } else {
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        }
+    
+        // This creates the file entry in the system database and returns the URI to write to
+        val targetUri = resolver.insert(audioCollection, contentValues) ?: return false
+    
+        return try {
+            resolver.openOutputStream(targetUri)?.use { outStream ->
+                finalTempFile.inputStream().use { inStream ->
+                    inStream.copyTo(outStream)
+                }
+            }
+            
+            // If we marked it pending, unmark it now that we are done writing
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                contentValues.clear()
+                contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                resolver.update(targetUri, contentValues, null, null)
+            }
+
+            cleanup(finalTempFile)
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "MediaStore Write Error: ${e.message}")
+            // Cleanup the orphaned MediaStore entry if the write failed
+            resolver.delete(targetUri, null, null)
+            false
+        }
+    }
+
     private fun writeToSaf(finalTempFile: File): Boolean {
         Log.i(TAG, "Exporting to SAF")
         try {
@@ -329,6 +386,14 @@ class AudiobookPipeline(
         } catch (e: Exception) {
             Log.e(TAG, "SAF Write Error during final export: ${e.message}")
             return false
+        }
+    }
+
+    private fun writeToOutputDir(finalTempFile: File): Boolean {
+        if (outputDirUri != null) {
+            return writeToSaf(finalTempFile)
+        } else {
+            return writeToMediaStore(finalTempFile)
         }
     }
 

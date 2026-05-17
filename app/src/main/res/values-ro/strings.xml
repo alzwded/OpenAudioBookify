@@ -82,7 +82,5 @@
     <string name="tts_list_item">Itemul %1$d: %2$s</string>
     <string name="tts_table">Tabel:</string>
     <string name="tts_table_row">Rândul %1$d:</string>
-    <string name="using_downloads">S-a ales dosarul Descărcări</string>
-    <string name="using_app_private_dir">se va salva în Android/data/%1$d${context.packageName}/files</string>
-    <string name="err_no_writeable_dir">Nu s-a putut identifica un dosar în care să se poată scrie. Verificați permisiunile</string>
+    <string name="error_missing_documentsui">Lipsește com.(google.)android.documentsui, nu se poate afișa fereastra de selecție a dosarului de ieșire. Continuați fără a specifica un dosar de ieșire, cărțile ar trebui să apară în /Audiobooks</string>
 </resources>

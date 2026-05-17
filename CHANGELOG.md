@@ -1,3 +1,14 @@
+10.0
+====
+
+Rollback workaround from version 9.0.
+
+You can now export books without specifying an output directory. In this case,
+the app uses the MediaStore to route output to your /Audiobooks directory.
+
+This should be more reliable across Android versions, including those which
+lost their Files/DocumentsUI app (or never had it in the first place).
+
 9.0
 ===
 
