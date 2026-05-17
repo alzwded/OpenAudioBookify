@@ -370,7 +370,40 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
             onAddBooksClick = { filePickerLauncher.launch(arrayOf("*/*")) },
             onClearBooksClick = { viewModel.clearBooks() },
             onRemoveBookClick = { book -> viewModel.removeBook(book) },
-            onSetOutputFolderClick = { dirPickerLauncher.launch(null) },
+            onSetOutputFolderClick = {
+                try {
+                    dirPickerLauncher.launch(null)
+                } catch (e: android.content.ActivityNotFoundException) {
+                    // user might have deleted the Files app to "debloat" their phone
+                    // fallback to Downloads or App Dir
+                    Log.e(TAG, "DocumentsUI missing, falling back to local folders", e)
+                    
+                    // Fallback 1: System Downloads folder
+                    val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(
+                        android.os.Environment.DIRECTORY_DOWNLOADS
+                    )
+                    
+                    // Note: On Android 10, raw file writing to Downloads might fail without 
+                    // requestLegacyExternalStorage="true" in the Manifest, so we check if it's writable.
+                    if (downloadsDir != null && downloadsDir.exists() && downloadsDir.canWrite()) {
+                        viewModel.setOutputDirUri(Uri.fromFile(downloadsDir))
+                        Toast.makeText(context, context.getString(R.string.using_downloads), Toast.LENGTH_LONG).show()
+                    } else {
+                        // Fallback 2: App Data folder
+                        val appDataDir = context.getExternalFilesDir(null)
+                        if (appDataDir != null) {
+                            viewModel.setOutputDirUri(Uri.fromFile(appDataDir))
+                            Toast.makeText(
+                                context, 
+                                context.getString(R.string.using_app_private_dir, context.packageName),
+                                Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            Toast.makeText(context, context.getString(R.string.err_no_writeable_dir), Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            },
             onStartProcessingClick = {
                 if (outputDirUri != null && selectedBooks.isNotEmpty()) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission) {

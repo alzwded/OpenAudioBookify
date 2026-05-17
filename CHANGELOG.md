@@ -1,3 +1,8 @@
+9.0
+===
+
+- Add fallbacks for the directory picker in case the Files/DocumentUI activity is indisposed
+
 8.0
 ===
 

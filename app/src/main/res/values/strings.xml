@@ -104,4 +104,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."</string>
     <string name="tts_list_item">List item %1$d: %2$s</string>
     <string name="tts_table">Table:</string>
     <string name="tts_table_row">Row %1$d:</string>
+    <string name="using_downloads">Using Downloads folder</string>
+    <string name="using_app_private_dir">saving to Android/data/%1$d${context.packageName}/files</string>
+    <string name="err_no_writeable_dir">Could not find a writeable directory. Check permissions</string>
 </resources>
