@@ -470,7 +470,7 @@ fun OpenAudioBookifyContent(
                         onClick = onClearOutputFolderClick,
                         enabled = !isProcessing
                     ) {
-                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.clear_books))
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.reset_output_folder))
                     }
                 }
             }

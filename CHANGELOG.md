@@ -1,3 +1,8 @@
+11.0
+====
+
+- Fix accessibility content description of the little reset button next to "Set output directory" to now correctly say "Reset to default output directory"
+
 10.0
 ====
 

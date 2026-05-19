@@ -105,4 +105,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."</string>
     <string name="tts_table">Table:</string>
     <string name="tts_table_row">Row %1$d:</string>
     <string name="error_missing_documentsui">Missing com.(google.)android.documentsui, cannot bring up file picker. Continue without setting a directory, the books should show up in /Audiobooks</string>
+    <string name="reset_output_folder">Reset to default output directory</string>
 </resources>

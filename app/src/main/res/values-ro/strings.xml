@@ -83,4 +83,5 @@
     <string name="tts_table">Tabel:</string>
     <string name="tts_table_row">Rândul %1$d:</string>
     <string name="error_missing_documentsui">Lipsește com.(google.)android.documentsui, nu se poate afișa fereastra de selecție a dosarului de ieșire. Continuați fără a specifica un dosar de ieșire, cărțile ar trebui să apară în /Audiobooks</string>
+    <string name="reset_output_folder">Restabilește dosarul de ieșire implicit</string>
 </resources>
