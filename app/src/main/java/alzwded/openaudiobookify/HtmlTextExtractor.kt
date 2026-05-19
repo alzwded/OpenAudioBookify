@@ -34,23 +34,33 @@ import org.jsoup.nodes.TextNode
 /**
  * High-level entry point for single HTML files.
  */
-fun extractHtmlTextLazily(context: Context, htmlContent: String): Sequence<String> =
+fun extractHtmlTextLazily(context: Context, htmlContent: String): Sequence<TextChunk> =
     ballparkHtmlChunks(context, htmlContent).chunkByPunctuation()
 
 /**
  * Extracts text from an HTML document lazily using a generator-consumer pattern.
+ * Attaches structural progress (0.0f to 1.0f) based on top-level node traversal.
  */
-fun ballparkHtmlChunks(context: Context, htmlContent: String): Sequence<String> = sequence {
+fun ballparkHtmlChunks(context: Context, htmlContent: String): Sequence<TextChunk> = sequence {
     val document = Jsoup.parse(htmlContent)
-    val body = document.body() ?: return@sequence
+    var container = document.body() ?: return@sequence
+
+    // Safeguard: Drill down if the content is wrapped in a single monolithic tag 
+    // (e.g., a single <div id="content"> wrapping all the actual paragraphs).
+    while (container.childrenSize() == 1 && container.child(0).isBlock) {
+        container = container.child(0)
+    }
+
+    val topLevelNodes = container.childNodes()
+    val totalNodes = topLevelNodes.size.coerceAtLeast(1)
 
     // 1. The intermediate generator: ballparks chunks directly from DOM rules
-    suspend fun SequenceScope<String>.traverse(node: Node) {
+    suspend fun SequenceScope<TextChunk>.traverse(node: Node, currentProgress: Float) {
         when (node) {
             // free floating text
             is TextNode -> {
                 val text = node.text()
-                if (text.isNotBlank()) yield(text)
+                if (text.isNotBlank()) yield(TextChunk(text, currentProgress))
             }
             // structure elements
             is Element -> {
@@ -59,41 +69,41 @@ fun ballparkHtmlChunks(context: Context, htmlContent: String): Sequence<String> 
                 when {
                     // breaks break
                     tag == "br" -> {
-                        yield("\n")
+                        yield(TextChunk("\n", currentProgress))
                     }
                     // for pre, preserve formatting, as it might be important
                     tag == "pre" -> {
-                        yield(node.wholeText() + "\n\n")
+                        yield(TextChunk(node.wholeText() + "\n\n", currentProgress))
                     }
                     // extract alt or title from img
                     tag == "img" || tag == "image" -> {
                         val alt = node.attr("alt").trim()
                         val title = node.attr("title").trim()
                         if (alt.isNotEmpty()) {
-                            yield(" [" + context.getString(R.string.tts_image_description, alt) + "] ")
+                            yield(TextChunk(" [" + context.getString(R.string.tts_image_description, alt) + "] ", currentProgress))
                         } else if (title.isNotEmpty()) {
-                            yield(" [" + context.getString(R.string.tts_image_title, title) + "] ")
+                            yield(TextChunk(" [" + context.getString(R.string.tts_image_title, title) + "] ", currentProgress))
                         } else {
-                            yield(" [" + context.getString(R.string.tts_image_no_description) + "] ")
+                            yield(TextChunk(" [" + context.getString(R.string.tts_image_no_description) + "] ", currentProgress))
                         }
                     }
                     // just grab flattened text from headings and drop a double
                     // line feed, as they probably don't have punctuation
                     tag.matches(Regex("h[1-6]")) -> {
-                        yield(context.getString(R.string.tts_heading, node.text()) + "\n\n")
+                        yield(TextChunk(context.getString(R.string.tts_heading, node.text()) + "\n\n", currentProgress))
                     }
                     // everything else:
                     else -> {
                         // recurse into both TextNode's and Elements, in order
                         for (child in node.childNodes()) {
-                            traverse(child)
+                            traverse(child, currentProgress)
                         }
 
                         // when done, check what we were, and issue some relevant whitespace
                         when (tag) {
-                            "table", "ol", "ul", "dl", "dd", "dt", "li", "tr", "thead", "td", "th" -> yield("\n\n")
-                            "p" -> yield("\n")
-                            else -> if (node.isBlock) yield(" ")
+                            "table", "ol", "ul", "dl", "dd", "dt", "li", "tr", "thead", "td", "th" -> yield(TextChunk("\n\n", currentProgress))
+                            "p" -> yield(TextChunk("\n", currentProgress))
+                            else -> if (node.isBlock) yield(TextChunk(" ", currentProgress))
                         }
                     } // else
                 } // when tag == ...
@@ -101,19 +111,25 @@ fun ballparkHtmlChunks(context: Context, htmlContent: String): Sequence<String> 
         } // when(node)
     } // traverse(node)
     
-    traverse(body)
+    // Iterate through the top-level nodes, calculating progress once per major block
+    for ((index, node) in topLevelNodes.withIndex()) {
+        val progress = (index.toFloat() / totalNodes).coerceIn(0f, 1f)
+        traverse(node, progress)
+    }
 } // ballparkHtmlChunks
 
 /**
  * Generic consumer that buffers ballparked strings and yields clean chunks based on punctuation.
  */
-fun Sequence<String>.chunkByPunctuation(): Sequence<String> = sequence {
+fun Sequence<TextChunk>.chunkByPunctuation(): Sequence<TextChunk> = sequence {
     // 2. The consumer: buffers the generated chunks and yields proper sentences
     val buffer = StringBuilder()
     val boundaryRegex = Regex("([.?!][ \\t\\n]|\\n\\n)")
+    var latestProgress: Float? = null
 
     for (chunk in this@chunkByPunctuation) {
-        buffer.append(chunk)
+        buffer.append(chunk.text)
+        latestProgress = chunk.progress // Keep track of the progress as we consume
 
         var match = boundaryRegex.find(buffer)
         while (match != null) {
@@ -127,7 +143,7 @@ fun Sequence<String>.chunkByPunctuation(): Sequence<String> = sequence {
 
             val chunkToYield = buffer.substring(0, splitIndex).trim()
             if (chunkToYield.isNotEmpty()) {
-                yield(chunkToYield)
+                yield(TextChunk(chunkToYield, latestProgress))
             }
 
             // Move the buffer forward past the matched boundary 
@@ -141,6 +157,6 @@ fun Sequence<String>.chunkByPunctuation(): Sequence<String> = sequence {
     // 3. Fallback: yield any remaining text in the buffer once the generator is empty
     val finalChunk = buffer.toString().trim()
     if (finalChunk.isNotEmpty()) {
-        yield(finalChunk)
+        yield(TextChunk(finalChunk, latestProgress))
     }
 }

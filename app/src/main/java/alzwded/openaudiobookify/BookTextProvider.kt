@@ -29,8 +29,21 @@ import android.content.Context
 import android.util.Log
 import java.io.File
 import java.io.InputStreamReader
+import android.provider.OpenableColumns
+import java.io.FilterInputStream
+import java.io.InputStream
+import kotlin.math.min
 
 private const val TAG = "OAB_BOOK_TEXT_PROVIDER"
+
+/**
+ * Data class to yield a text chunk and percentage of how much text
+ * was read from a source.
+ */
+data class TextChunk(
+    val text: String,
+    val progress: Float? // 0.0f to 1.0f
+)
 
 /**
  * Interface for extracting text sequentially from a book source.
@@ -39,7 +52,7 @@ interface BookTextProvider {
     /**
      * Lazily yields chunks of text from the book.
      */
-    fun extractText(): Sequence<String>
+    fun extractText(): Sequence<TextChunk>
 }
 
 /**
@@ -62,15 +75,59 @@ object BookTextProviderFactory {
 }
 
 /**
+ * Wrap an InputStream to report byte consumption for progress reporting
+ */
+class CountingInputStream(
+    inputStream: InputStream,
+    private val totalBytes: Long
+) : FilterInputStream(inputStream) {
+
+    private var bytesRead: Long = 0
+
+    val progress: Float
+        get() = if (totalBytes > 0) min(1.0f, bytesRead.toFloat() / totalBytes) else 0.0f
+
+    override fun read(): Int {
+        val b = super.read()
+        if (b != -1) bytesRead++
+        return b
+    }
+
+    override fun read(b: ByteArray, off: Int, len: Int): Int {
+        val read = super.read(b, off, len)
+        if (read != -1) bytesRead += read
+        return read
+    }
+}
+
+/**
+ * Get the file size from a content uri
+ */
+fun getFileSize(context: Context, uri: android.net.Uri): Long {
+    context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+        val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+        if (sizeIndex != -1 && cursor.moveToFirst()) {
+            return cursor.getLong(sizeIndex)
+        }
+    }
+    return 0L
+}
+
+/**
  * Batches sequences of text into chunks that respect the TTS engine's character limit.
  */
-fun Sequence<String>.batchByLength(maxLength: Int): Sequence<String> = sequence {
+fun Sequence<TextChunk>.batchByLength(maxLength: Int): Sequence<TextChunk> = sequence {
     val currentBatch = StringBuilder()
-    for (paragraph in this@batchByLength) {
+    var latestProgress: Float? = null
+
+    for (chunk in this@batchByLength) {
+        val paragraph = chunk.text
+        latestProgress = chunk.progress // Capture the most recent progress
+
         if (currentBatch.length + paragraph.length + 2 > maxLength) {
             if (currentBatch.isNotEmpty()) {
                 Log.d(TAG, "Yielding a paragraph of length ${currentBatch.length}")
-                yield(currentBatch.toString())
+                yield(TextChunk(currentBatch.toString(), latestProgress))
                 currentBatch.clear()
             }
         }
@@ -80,19 +137,20 @@ fun Sequence<String>.batchByLength(maxLength: Int): Sequence<String> = sequence 
         if (paragraph.length + 2 < maxLength) {
             currentBatch.append(paragraph)
         } else {
+            // If we have to hard-split a massive string, they all share the current progress
             Log.d(TAG, "Paragraph was ${paragraph.length} long, splitting in $maxLength - 2 chunks")
-            paragraph.chunked(maxLength - 2).mapIndexed { index, chunk ->
-                if ((index == paragraph.length / (maxLength - 2)) && chunk.length < maxLength - 2) {
-                    currentBatch.append(chunk)
+            paragraph.chunked(maxLength - 2).mapIndexed { index, subChunk ->
+                if ((index == paragraph.length / (maxLength - 2)) && subChunk.length < maxLength - 2) {
+                    currentBatch.append(subChunk)
                 } else {
-                    yield(chunk)
+                    yield(TextChunk(subChunk, latestProgress))
                 }
             }
         }
     }
     if (currentBatch.isNotEmpty()) {
         Log.d(TAG, "Yielding a paragraph of length ${currentBatch.length}")
-        yield(currentBatch.toString())
+        yield(TextChunk(currentBatch.toString(), latestProgress))
     }
 }
 
@@ -107,9 +165,13 @@ class TxtBookTextProvider(
     private val book: Book
 ) : BookTextProvider {
 
-    override fun extractText(): Sequence<String> = sequence {
+    override fun extractText(): Sequence<TextChunk> = sequence {
+        val totalBytes = getFileSize(context, book.uri)
+
         context.contentResolver.openInputStream(book.uri)?.use { inputStream ->
-            InputStreamReader(inputStream).buffered().use { reader ->
+            val countingStream = CountingInputStream(inputStream, totalBytes)
+
+            InputStreamReader(countingStream).buffered().use { reader ->
                 val buffer = java.lang.StringBuilder()
                 var prevChar = -1
                 var charNum = reader.read()
@@ -128,7 +190,7 @@ class TxtBookTextProvider(
                     if (isSentenceEnd || isParagraphEnd) {
                         val chunk = buffer.toString().trim()
                         if (chunk.isNotEmpty()) {
-                            yield(chunk)
+                            yield(TextChunk(chunk, countingStream.progress))
                         }
                         buffer.clear()
                     }
@@ -140,7 +202,7 @@ class TxtBookTextProvider(
                 // Yield any remaining text
                 val finalChunk = buffer.toString().trim()
                 if (finalChunk.isNotEmpty()) {
-                    yield(finalChunk)
+                    yield(TextChunk(finalChunk, 1.0f))
                 }
             }
         }
@@ -157,16 +219,20 @@ class MarkdownBookTextProvider(
     private val book: Book
 ) : BookTextProvider {
 
-    override fun extractText(): Sequence<String> = sequence {
+    override fun extractText(): Sequence<TextChunk> = sequence {
+        val totalBytes = getFileSize(context, book.uri)
+
         context.contentResolver.openInputStream(book.uri)?.use { inputStream ->
-            InputStreamReader(inputStream).buffered().use { reader ->
+            val countingStream = CountingInputStream(inputStream, totalBytes)
+
+            InputStreamReader(countingStream).buffered().use { reader ->
                 var inList = false
                 var listItemCount = 0
                 var inTable = false
                 var tableRowCount = 0
                 val paragraphBuffer = StringBuilder()
 
-                suspend fun SequenceScope<String>.flushParagraph() {
+                suspend fun SequenceScope<TextChunk>.flushParagraph() {
                     if (paragraphBuffer.isBlank()) return
                     val text = cleanMarkdownFormatting(paragraphBuffer.toString())
                     
@@ -182,7 +248,7 @@ class MarkdownBookTextProvider(
                         if (isSentenceEnd) {
                             val chunk = chunkBuffer.toString().trim()
                             if (chunk.isNotEmpty()) {
-                                yield(chunk)
+                                yield(TextChunk(chunk, countingStream.progress))
                             }
                             chunkBuffer.clear()
                         }
@@ -191,7 +257,7 @@ class MarkdownBookTextProvider(
                     
                     val finalChunk = chunkBuffer.toString().trim()
                     if (finalChunk.isNotEmpty()) {
-                        yield(finalChunk)
+                        yield(TextChunk(finalChunk, 1.0f))
                     }
                     
                     paragraphBuffer.clear()
@@ -209,7 +275,7 @@ class MarkdownBookTextProvider(
                             flushParagraph()
                             inTable = true
                             tableRowCount = 1
-                            yield(context.getString(R.string.tts_table))
+                            yield(TextChunk(context.getString(R.string.tts_table), countingStream.progress))
                         }
                         // Skip the markdown table structure separator line (e.g. |---|---|)
                         if (cleanLine.matches(Regex("^\\|[\\s\\-:]+\\|.*"))) {
@@ -221,7 +287,7 @@ class MarkdownBookTextProvider(
                         }
                         // Columns are separated by two new lines to force TTS to pause
                         val rowText = context.getString(R.string.tts_table_row, tableRowCount) + "\n\n" + columns.joinToString("\n\n")
-                        yield(rowText)
+                        yield(TextChunk(rowText, countingStream.progress))
                         tableRowCount++
                         
                         inList = false
@@ -236,7 +302,7 @@ class MarkdownBookTextProvider(
                         flushParagraph()
                         inList = false
                         val headingText = cleanMarkdownFormatting(headingMatch.groupValues[1])
-                        yield(context.getString(R.string.tts_heading, headingText))
+                        yield(TextChunk(context.getString(R.string.tts_heading, headingText), countingStream.progress))
                         continue
                     }
 
@@ -248,13 +314,13 @@ class MarkdownBookTextProvider(
                         if (!inList) {
                             inList = true
                             listItemCount = 1
-                            yield(context.getString(R.string.tts_list))
+                            yield(TextChunk(context.getString(R.string.tts_list), countingStream.progress))
                         } else {
                             listItemCount++
                         }
                         
                         val itemText = cleanMarkdownFormatting(listMatch.groupValues[2])
-                        yield(context.getString(R.string.tts_list_item, listItemCount, itemText))
+                        yield(TextChunk(context.getString(R.string.tts_list_item, listItemCount, itemText), countingStream.progress))
                         continue
                     }
 
@@ -313,7 +379,7 @@ class EpubBookTextProvider(
     private val book: Book
 ) : BookTextProvider {
 
-    override fun extractText(): Sequence<String> = sequence {
+    override fun extractText(): Sequence<TextChunk> = sequence {
         // Copy the URI content to a temporary File so ZipFile can process it
         val tempFile = File(context.cacheDir, "temp_${System.currentTimeMillis()}.epub")
         try {
@@ -339,7 +405,7 @@ class EpubBookTextProvider(
 // --- HTML Implementation ---
 
 class HtmlBookTextProvider(private val context: Context, private val book: Book) : BookTextProvider {
-    override fun extractText(): Sequence<String> = sequence {
+    override fun extractText(): Sequence<TextChunk> = sequence {
         context.contentResolver.openInputStream(book.uri)?.use { inputStream ->
             val htmlContent = inputStream.bufferedReader().use { it.readText() }
             yieldAll(extractHtmlTextLazily(context, htmlContent))

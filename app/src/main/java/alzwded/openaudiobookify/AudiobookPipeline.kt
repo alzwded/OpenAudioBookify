@@ -94,7 +94,7 @@ class AudiobookPipeline(
     private val onError: (String) -> Unit = {},
     private val onPipelineComplete: () -> Unit
 ) {
-    private val textChunks: Iterator<String> = provider.extractText().batchByLength(3900).iterator()
+    private val textChunks: Iterator<TextChunk> = provider.extractText().batchByLength(3900).iterator()
     private var chunkIndex = 0
     @Volatile private var isCancelled = false
 
@@ -192,7 +192,7 @@ class AudiobookPipeline(
         chunkIndex++
         onProgress(chunkIndex)
 
-        val text = textChunks.next()
+        val text = textChunks.next().text
         val wavFile = getWavFile(chunkIndex)
         val utteranceId = "chunk_$chunkIndex"
 

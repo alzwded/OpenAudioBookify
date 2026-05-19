@@ -34,19 +34,23 @@ private const val TAG = "OAB_EPUB_EXTRACTOR"
 
 /**
  * Extracts text from an EPub file lazily, ensuring sentences remain coherent
- * across multiple internal HTML spine files.
+ * across multiple internal HTML spine files, whilst calculating global progress.
  */
 fun extractEpubTextLazily(
     context: Context,
     epubFile: File,
     spineList: List<String>,
     manifestMap: Map<String, String>
-): Sequence<String> {
+): Sequence<TextChunk> {
+    
+    val totalSpines = spineList.size.coerceAtLeast(1)
+
     // 1. Create a raw stream of all ballparked chunks from all spine items
     val ballparkStream = sequence {
         ZipFile(epubFile).use { zip ->
             Log.i(TAG, "Starting EPUB")
-            for (id in spineList) {
+            
+            for ((spineIndex, id) in spineList.withIndex()) {
                 Log.i(TAG, "Next spine entry")
                 val filePath = manifestMap[id] ?: continue
                 val zipEntry = zip.getEntry(filePath)
@@ -54,8 +58,17 @@ fun extractEpubTextLazily(
                 if (zipEntry != null) {
                     Log.i(TAG, "Next zip entry")
                     val htmlContent = zip.getInputStream(zipEntry).bufferedReader().use { it.readText() }
-                    // Yield raw ballpark chunks to the aggregate stream
-                    yieldAll(ballparkHtmlChunks(context, htmlContent))
+                    
+                    // Extract chunks using our HTML logic, which yields 0.0 to 1.0 progress for THIS specific file
+                    val htmlChunks = ballparkHtmlChunks(context, htmlContent)
+                    
+                    for (chunk in htmlChunks) {
+                        // Scale the local HTML progress into the global EPUB progress
+                        val localProgress = chunk.progress ?: 0f
+                        val globalProgress = (spineIndex + localProgress) / totalSpines
+                        
+                        yield(TextChunk(chunk.text, globalProgress))
+                    }
                 }
             }
         }

@@ -25,10 +25,37 @@
 
 package alzwded.openaudiobookify
 
+import android.content.Context
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.eq
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.`when`
 
 class HtmlExtractorTest {
+
+    private lateinit var context: Context
+
+    @Before
+    fun setup() {
+        // Mock the Android Context to return the exact strings your tests expect.
+        // This avoids needing Robolectric for a pure JVM unit test.
+        context = mock(Context::class.java)
+
+        `when`(context.getString(eq(R.string.tts_heading), any())).thenAnswer { 
+            it.getArgument<String>(1) // Pass heading text through as-is
+        }
+        `when`(context.getString(eq(R.string.tts_image_description), any())).thenAnswer { 
+            "Image description: " + it.getArgument<String>(1) 
+        }
+        `when`(context.getString(eq(R.string.tts_image_title), any())).thenAnswer { 
+            "Image title: " + it.getArgument<String>(1) 
+        }
+        `when`(context.getString(eq(R.string.tts_image_no_description))).thenReturn("Image")
+    }
 
     @Test
     fun testComplexHtmlStructureProducesCorrectPauses() {
@@ -50,7 +77,8 @@ class HtmlExtractorTest {
             </html>
         """.trimIndent()
 
-        val results = extractHtmlTextLazily(html).toList()
+        val results = extractHtmlTextLazily(context, html).toList()
+        val texts = results.map { it.text } // Unwrap the TextChunk
 
         val expected = listOf(
             "The Beginning",
@@ -61,19 +89,30 @@ class HtmlExtractorTest {
             "A final dangling thought"
         )
 
-        assertEquals(expected, results)
+        // 1. Verify structural extraction
+        assertEquals(expected, texts)
+
+        // 2. Verify progress math
+        assertTrue("Progress should never be null", results.all { it.progress != null })
+        assertTrue("Progress should be between 0.0 and 1.0", results.all { it.progress!! in 0f..1f })
+        
+        // 3. Verify monotonic increase (progress never goes backwards)
+        val isMonotonic = results.zipWithNext().all { (prev, next) -> 
+            prev.progress!! <= next.progress!! 
+        }
+        assertTrue("Progress should be monotonically increasing", isMonotonic)
     }
 
     @Test
     fun testImageAltTextExtraction() {
         val html = """<p>Look at this: <img src="dog.jpg" alt="A cute golden retriever"> Cool, right?</p>"""
-        val results = extractHtmlTextLazily(html).toList()
+        val results = extractHtmlTextLazily(context, html).toList()
         
         // Actual output has double spaces around the brackets due to " [Alt] " being yielded
         // into a buffer that might already have a space.
         val expected = "Look at this:  [Image description: A cute golden retriever]  Cool, right?"
         
-        assertEquals(expected, results.first())
+        assertEquals(expected, results.first().text)
     }
 
     @Test
@@ -88,7 +127,7 @@ class HtmlExtractorTest {
             <p>End of code.</p>
         """.trimIndent()
 
-        val results = extractHtmlTextLazily(html).toList()
+        val results = extractHtmlTextLazily(context, html).toList()
 
         // Based on current logic:
         // 1. "Here is some code:" + the code block (no boundary between p and pre)
@@ -103,7 +142,7 @@ class HtmlExtractorTest {
                 }
         """.trimIndent()
         
-        assertEquals(expectedFirst, results[0])
-        assertEquals("End of code.", results[1])
+        assertEquals(expectedFirst, results[0].text)
+        assertEquals("End of code.", results[1].text)
     }
 }
