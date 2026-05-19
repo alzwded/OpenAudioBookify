@@ -1,3 +1,9 @@
+next
+====
+
+The Main Activity now provides a percentage of book processed to get a better
+feel of how long it will take to process a book.
+
 13.0
 ====
 
