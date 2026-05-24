@@ -319,8 +319,15 @@ class AudiobookPipeline(
             
             // On API 29+, we can cleanly organize this into a subfolder
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // Environment.DIRECTORY_AUDIOBOOKS is API 29+
-                put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_AUDIOBOOKS}/OpenAudiobookify")
+                // Environment.DIRECTORY_AUDIOBOOKS is API 30+
+                val magicDir = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    Environment.DIRECTORY_AUDIOBOOKS
+                } else {
+                    // fallback to one of the values that existed on 10,
+                    // i.e. one of [Alarms, _Music_, Notifications, Podcasts, Ringtones
+                    Environment.DIRECTORY_PODCASTS
+                }
+                put(MediaStore.MediaColumns.RELATIVE_PATH, "${magicDir}/OpenAudiobookify")
                 // Optional: Mark as pending while we write to prevent other apps from reading a partial file
                 put(MediaStore.MediaColumns.IS_PENDING, 1)
             }

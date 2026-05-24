@@ -1,3 +1,10 @@
+12.0
+====
+
+- Apparently, `Environment.DIRECTORY_AUDIOBOOKS` didn't exist on Android 10.0, so use `Environment.DIRECTORY_PODCASTS` instead
+  + possibly [here](https://android.googlesource.com/platform/packages/providers/MediaProvider/+/refs/tags/android-10.0.0_r47/src/com/android/providers/media/MediaProvider.java#1959)
+- Should fix crash writing final merged output file on Android 10
+
 11.0
 ====
 
