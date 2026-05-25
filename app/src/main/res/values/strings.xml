@@ -13,7 +13,8 @@
     <string name="output_set">Output Set</string>
     <string name="books_to_process">Books to process:</string>
     <string name="status_queued">Queued</string>
-    <string name="status_processing">Processing (%1$d%%)</string>
+    <string name="status_processing_speaking">Processing (%1$d%%)</string>
+    <string name="status_processing_merging">Finishing (%1$d%%)</string>
     <string name="status_finished">Finished</string>
     <string name="remove_book_desc">Remove %1$s</string>
     <string name="cancel_processing">Cancel Processing</string>
