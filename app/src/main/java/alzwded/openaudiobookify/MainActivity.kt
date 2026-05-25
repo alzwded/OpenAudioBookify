@@ -281,12 +281,51 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
         )
     }
 
+    var hasWriteExternalPermission by remember {
+        mutableStateOf(
+            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+            } else {
+                // permission no longer necessary starting in Q when using MediaStore;
+                // if an output directory is set with SAF, you grant permission then, any version
+                true
+            }
+        )
+    }
+
+    // Re-verify permission whenever the Composable comes into the foreground
+    // (in case the user changed permissions in system settings)
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            hasWriteExternalPermission = ContextCompat.checkSelfPermission(
+                context, 
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            hasNotificationPermission = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
             hasNotificationPermission = isGranted
             if (!isGranted) {
                 Toast.makeText(context, context.getString(R.string.notification_permission_required), Toast.LENGTH_SHORT).show()
+            }
+        }
+    )
+
+    val writeExternalPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            hasWriteExternalPermission = isGranted
+            if (!isGranted) {
+                Toast.makeText(context, context.getString(R.string.write_external_permission_required), Toast.LENGTH_SHORT).show()
             }
         }
     )
@@ -387,6 +426,8 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
                 if (selectedBooks.isNotEmpty()) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission) {
                         permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P && !hasWriteExternalPermission) {
+                        writeExternalPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE);
                     } else {
                         startProcessingService()
                     }

@@ -2,6 +2,7 @@
     <string name="about">About</string>
     <string name="settings">Settings</string>
     <string name="notification_permission_required">Notification permission required for background processing</string>
+    <string name="write_external_permission_required">Write External Storage permission required, unless you explicitly set an output directory</string>
     <string name="processing_started">Processing started in background</string>
     <string name="error_no_output_folder">No output folder selected</string>
     <string name="error_no_books_added">Add some books first</string>

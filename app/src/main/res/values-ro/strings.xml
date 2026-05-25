@@ -2,6 +2,7 @@
     <string name="about">Despre</string>
     <string name="settings">Setări</string>
     <string name="notification_permission_required">Aplicația are nevoie de permisiunea de a afișa notificări pentru procesarea datelor în fundal</string>
+    <string name="write_external_permission_required">Aplicația are nevoie de permisiunea de a scrie pe mediul de stocare extern ("Write External Storage"), cu excepția cazului în care alegeți explicit un dosar de ieșire</string>
     <string name="processing_started">Procesarea a început în fundal</string>
     <string name="error_no_output_folder">Nu a fost selectat niciun dosar pentru datele de ieșire</string>
     <string name="error_no_books_added">Trebuie să adăugați cărți</string>

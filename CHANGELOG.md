@@ -1,3 +1,13 @@
+13.0
+====
+
+- Fix permission issue for Androids < 10 introduced by the workaround
+  introduced in version 10.0 which uses the MediaStore to output audiobooks to
+  a default directory
+- Add a LaunchedEffect to re-check if permissions were gained/lost, in case
+  they were gained/lost since the app was started and since we last checked
+  and the activity wasn't reaped by the system
+
 12.0
 ====
 
