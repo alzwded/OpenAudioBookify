@@ -4,6 +4,7 @@
 - The Main Activity now provides a percentage of book processed to get a better
   feel of how long it will take to process a book.
 - Stop double re-encoding final merged m4a
+- Output is now 44.1KHz, eliminating some audio artefacts (I don't why it defaulted to 12Khz)
 
 13.0
 ====

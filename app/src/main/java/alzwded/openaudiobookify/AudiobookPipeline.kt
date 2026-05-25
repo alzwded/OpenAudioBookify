@@ -114,6 +114,7 @@ class AudiobookPipeline(
             ): Codec {
                 val customFormat = format.buildUpon()
                     .setChannelCount(1)
+                    .setSampleRate(44100)
                     .setAverageBitrate(targetBitrate)
                     .build()
                 return defaultEncoderFactory.createForAudioEncoding(customFormat, logSessionId)
@@ -279,12 +280,14 @@ class AudiobookPipeline(
         }
 
         val sequence = EditedMediaItemSequence.withAudioFrom(editedMediaItems)
-        val composition = Composition.Builder(sequence).build()
+        val composition = Composition.Builder(sequence)
+            .setTransmuxAudio(true)
+            .build()
 
         val finalTempFile = File(context.cacheDir, "final_merged_audiobook.m4a")
         if (finalTempFile.exists()) finalTempFile.delete()
 
-        onProgress(BookStatus.MERGING, 91);
+        onProgress(BookStatus.MERGING, 95);
 
         val mergeTransformer = createPassthroughTransformer(object : Transformer.Listener {
             override fun onCompleted(composition: Composition, exportResult: ExportResult) {
