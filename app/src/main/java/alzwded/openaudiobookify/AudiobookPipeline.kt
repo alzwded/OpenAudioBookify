@@ -90,7 +90,7 @@ class AudiobookPipeline(
     private val bookName: String,
     private val outputDirUri: Uri?,
     private val targetBitrate: Int = 48000,
-    private val onProgress: (Int) -> Unit = {},
+    private val onProgress: (BookStatus, Int) -> Unit = { bookStatus, chunk -> },
     private val onError: (String) -> Unit = {},
     private val onPipelineComplete: () -> Unit
 ) {
@@ -132,6 +132,17 @@ class AudiobookPipeline(
             .setEncoderFactory(customEncoderFactory)
             .addListener(listener)
             .build()
+    }
+
+    /**
+     * Creates a barebones Transformer optimized for transmuxing (passthrough).
+     * Media3 will automatically copy compressed audio samples directly without re-encoding
+     * because the input chunk formats already match perfectly.
+     */
+    private fun createPassthroughTransformer(listener: Transformer.Listener): Transformer {
+        return Transformer.Builder(context)
+            .addListener(listener)
+            .build() 
     }
 
     // Transformer for encoding WAV -> M4A
@@ -190,9 +201,9 @@ class AudiobookPipeline(
         Log.i(TAG, "Processing next chunk $chunkIndex")
 
         chunkIndex++
-        onProgress(chunkIndex)
-
-        val text = textChunks.next().text
+        val chunk = textChunks.next()
+        onProgress(BookStatus.SPEAKING, ((chunk?.progress ?: 0.5f) * 90.0f).toInt())
+        val text = chunk.text
         val wavFile = getWavFile(chunkIndex)
         val utteranceId = "chunk_$chunkIndex"
 
@@ -273,7 +284,9 @@ class AudiobookPipeline(
         val finalTempFile = File(context.cacheDir, "final_merged_audiobook.m4a")
         if (finalTempFile.exists()) finalTempFile.delete()
 
-        val mergeTransformer = createAudioTransformer(object : Transformer.Listener {
+        onProgress(BookStatus.MERGING, 91);
+
+        val mergeTransformer = createPassthroughTransformer(object : Transformer.Listener {
             override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                 Log.i(TAG, "Final m4a completed")
                 if (!isCancelled) {

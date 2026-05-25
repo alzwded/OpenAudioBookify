@@ -1,8 +1,9 @@
-next
+14.0
 ====
 
-The Main Activity now provides a percentage of book processed to get a better
-feel of how long it will take to process a book.
+- The Main Activity now provides a percentage of book processed to get a better
+  feel of how long it will take to process a book.
+- Stop double re-encoding final merged m4a
 
 13.0
 ====

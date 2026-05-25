@@ -50,7 +50,7 @@ import java.util.Locale
 
 private const val TAG = "OAB_AUDIOBOOK_SERVICE"
 
-enum class BookStatus { QUEUED, PROCESSING, FINISHED }
+enum class BookStatus { QUEUED, SPEAKING, MERGING, FINISHED }
 data class BookState(
     val uri: Uri,
     val name: String,
@@ -275,7 +275,7 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
         val cleanBookName = nextBook.name.substringBeforeLast(".")
         val book = Book(cleanBookName, nextBook.uri)
 
-        updateBookState(nextBook.uri, BookStatus.PROCESSING, 0)
+        updateBookState(nextBook.uri, BookStatus.SPEAKING, 0)
         updateNotification(getString(R.string.generating_audiobook, cleanBookName))
 
         serviceScope.launch(Dispatchers.IO) {
@@ -291,8 +291,8 @@ class AudiobookService : Service(), TextToSpeech.OnInitListener {
                         bookName = book.name,
                         outputDirUri = outputDirUri,
                         targetBitrate = settingsHelper.encoderBitrate,
-                        onProgress = { chunk ->
-                            updateBookState(nextBook.uri, BookStatus.PROCESSING, chunk)
+                        onProgress = { status, chunk ->
+                            updateBookState(nextBook.uri, status, chunk)
                         },
                         onError = { errorMsg ->
                             serviceScope.launch(Dispatchers.Main) {

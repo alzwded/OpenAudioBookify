@@ -540,7 +540,8 @@ fun OpenAudioBookifyContent(
                             )
                             when (book.status) {
                                 BookStatus.QUEUED -> Text(stringResource(R.string.status_queued))
-                                BookStatus.PROCESSING -> Text(stringResource(R.string.status_processing, book.currentChunk))
+                                BookStatus.SPEAKING -> Text(stringResource(R.string.status_processing, book.currentChunk))
+                                BookStatus.MERGING -> Text(stringResource(R.string.status_processing, book.currentChunk))
                                 BookStatus.FINISHED -> Text(stringResource(R.string.status_finished))
                             }
                         }

@@ -45,7 +45,7 @@ fun DefaultPreview() {
                 isProcessing = false,
                 queueState = listOf(
                     BookState(Uri.EMPTY, "The Great Gatsby.epub", BookStatus.FINISHED, 8960),
-                    BookState(Uri.EMPTY, "1984.txt", BookStatus.PROCESSING, 42),
+                    BookState(Uri.EMPTY, "1984.txt", BookStatus.SPEAKING, 42),
                     BookState(Uri.EMPTY, "Pride and Prejudice.html", BookStatus.QUEUED, 0)
                 ),
                 onAddBooksClick = {},
@@ -91,7 +91,7 @@ fun IsProcessingPreview() {
                 isProcessing = true,
                 queueState = listOf(
                     BookState(Uri.EMPTY, "The Great Gatsby.epub", BookStatus.FINISHED, 8960),
-                    BookState(Uri.EMPTY, "1984.txt", BookStatus.PROCESSING, 42),
+                    BookState(Uri.EMPTY, "1984.txt", BookStatus.SPEAKING, 42),
                     BookState(Uri.EMPTY, "Pride and Prejudice.html", BookStatus.QUEUED, 0)
                 ),
                 onAddBooksClick = {},

@@ -13,7 +13,7 @@
     <string name="output_set">Dosar selectat</string>
     <string name="books_to_process">Cărți de procesat:</string>
     <string name="status_queued">În așteptare</string>
-    <string name="status_processing">Se procesează (Partea %1$d)</string>
+    <string name="status_processing">Se procesează (%1$d%%)</string>
     <string name="status_finished">Finalizat</string>
     <string name="remove_book_desc">Elimină %1$s</string>
     <string name="cancel_processing">Anulează procesarea</string>
