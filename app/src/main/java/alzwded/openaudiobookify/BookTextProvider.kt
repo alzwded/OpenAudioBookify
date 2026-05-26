@@ -139,12 +139,38 @@ fun Sequence<TextChunk>.batchByLength(maxLength: Int): Sequence<TextChunk> = seq
         } else {
             // If we have to hard-split a massive string, they all share the current progress
             Log.d(TAG, "Paragraph was ${paragraph.length} long, splitting in $maxLength - 2 chunks")
-            paragraph.chunked(maxLength - 2).mapIndexed { index, subChunk ->
-                if ((index == paragraph.length / (maxLength - 2)) && subChunk.length < maxLength - 2) {
-                    currentBatch.append(subChunk)
-                } else {
-                    yield(TextChunk(subChunk, latestProgress))
+
+            // Try to split around spaces. This is because when TalkBack is running, we have a
+            // harshly reduced window of 200 characters, which might actually be shorter than
+            // one paragraph.
+            val targetLimit = maxLength - 2
+            var startIndex = 0
+            
+            while (startIndex < paragraph.length) {
+                val remainingLength = paragraph.length - startIndex
+                
+                // Tail-end handling: if the rest fits, append to the current batch and finish
+                if (remainingLength <= targetLimit) {
+                    currentBatch.append(paragraph.substring(startIndex))
+                    break
                 }
+            
+                val desiredEndIndex = startIndex + targetLimit
+                // Define our 8-character lookback boundary
+                val lookbackBound = maxOf(startIndex, desiredEndIndex - 8)
+                val spaceIndex = paragraph.lastIndexOf(' ', desiredEndIndex - 1)
+            
+                // If a space is found within the last 8 characters, split right after it
+                val actualEndIndex = if (spaceIndex >= lookbackBound) {
+                    spaceIndex + 1 
+                } else {
+                    desiredEndIndex // Fallback to hard split if no space is within budget
+                }
+            
+                val subChunk = paragraph.substring(startIndex, actualEndIndex)
+                yield(TextChunk(subChunk, latestProgress))
+            
+                startIndex = actualEndIndex
             }
         }
     }

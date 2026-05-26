@@ -1,3 +1,10 @@
+15.0
+====
+
+Actually successfully read book when TalkBack is running. Note, this uses
+a much smaller utterance chunk. Also note, it is very likely the app will
+look up on Androids older than 10.
+
 14.0
 ====
 

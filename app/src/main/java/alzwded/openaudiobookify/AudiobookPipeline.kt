@@ -66,6 +66,8 @@ import android.provider.MediaStore
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
+import android.view.accessibility.AccessibilityManager
+import android.accessibilityservice.AccessibilityServiceInfo
 import androidx.documentfile.provider.DocumentFile
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
@@ -94,12 +96,42 @@ class AudiobookPipeline(
     private val onError: (String) -> Unit = {},
     private val onPipelineComplete: () -> Unit
 ) {
-    private val textChunks: Iterator<TextChunk> = provider.extractText().batchByLength(3900).iterator()
+    private val textChunks: Iterator<TextChunk> = provider.extractText().batchByLength(getBatchSize()).iterator()
     private var chunkIndex = 0
     @Volatile private var isCancelled = false
 
     // Keep track of our encoded intermediate m4a chunks
     private val encodedChunkFiles = mutableListOf<File>()
+
+    // lambda to call as continuation, part of the restartable utterance
+    // See UtteranceProgressListener.onStop / .handleTtsInterruption
+    private var synthesizeCurrentChunk: () -> Int = { ->
+        TextToSpeech.ERROR
+    }
+
+    private var isTalkbackRunning = false
+
+    // when TalkBack is running, it will interrupt TTS.
+    // So use a much smaller chunk size than in sighted mode
+    // to reduce the chances of interruption. This is not ideal,
+    // as it will probably induce unnatural pauses in sentences,
+    // but it is what it is. The alternative might be "it dudn't work"
+    private fun getBatchSize(): Int {
+        val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
+        val defaultMaxLength = 3900
+        if (!am.isEnabled) return defaultMaxLength
+        val enabled = am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_SPOKEN)
+        // If any service provides spoken feedback it's very likely TalkBack (or another screen reader) is active
+        if (enabled.isNotEmpty()) {
+            // XXX yeh yeh, this is ugly
+            isTalkbackRunning = true
+            // 5-8s, maybe even more...
+            return 200
+        } else {
+            // as long as we can
+            return defaultMaxLength
+        }
+    }
 
     /**
      * Creates a Transformer configured for Mono, 48kbps AAC.
@@ -209,9 +241,13 @@ class AudiobookPipeline(
         val utteranceId = "chunk_$chunkIndex"
 
         val params = Bundle().apply { putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId) }
+
+        synthesizeCurrentChunk = { ->
+            tts.synthesizeToFile(text, params, wavFile, utteranceId)
+        }
         
         try {
-            val result = tts.synthesizeToFile(text, params, wavFile, utteranceId)
+            val result = synthesizeCurrentChunk()
             if (result == TextToSpeech.ERROR) {
                 Log.e(TAG, "TTS Error: synthesizeToFile returned ERROR for chunk $chunkIndex")
                 isCancelled = true
@@ -240,16 +276,57 @@ class AudiobookPipeline(
                 }
             }
 
+            override fun onStop(utteranceId: String?, interrupted: Boolean) {
+                super.onStop(utteranceId, interrupted)
+                handleTtsInterruption(utteranceId, interrupted)
+            }
+
+            private fun handleErrorOrInterruption(utteranceId: String?, errorCode: Int) {
+                Log.w(TAG, "TTS Error on $utteranceId with code: $errorCode")
+                
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && isTalkbackRunning) {
+                    // Pre-API 29: TalkBack interruptions usually manifest as generic errors.
+                    // More specifically, Google TTS would do nothing, and everything would just
+                    // freeze up. Honestly, I'd rather bump minSdk to 29 than chase that particular
+                    // rabbit down this particular rabbit hole.
+                    Log.i(TAG, "API < 29 detected while talkback is running, treating error as an interruption.")
+                    handleTtsInterruption(utteranceId, true)
+                } else {
+                    // API 29+: If we get here, it's a real unrecoverable TTS error, 
+                    // NOT an interruption (since interruptions go to onStop).
+                    Log.e(TAG, "TTS Error on chunk $chunkIndex: $errorCode")
+                    isCancelled = true
+                    cleanup()
+                    onError(context.getString(R.string.error_tts_exception, "Error code $errorCode"))
+                }
+            }
+
+            private fun handleTtsInterruption(utteranceId: String?, interrupted: Boolean) {
+                Log.w(TAG, "TTS utterance stopped for $utteranceId, interrupted=$interrupted")
+                if (isCancelled) return
+                
+                // Talkback (or another app) flushed the TTS queue. 
+                // We need to retry the *current* chunk (don't increment chunkIndex yet).
+                if (interrupted) {
+                    Handler(context.mainLooper).postDelayed({
+                        if (isCancelled) return@postDelayed 
+                        Log.i(TAG, "Retrying TTS utterance for $utteranceId after interruption")
+                        // Nuke the partially written file to ensure a clean header on retry
+                        val wavFile = getWavFile(chunkIndex)
+                        if (wavFile.exists()) wavFile.delete()
+                        // retry
+                        synthesizeCurrentChunk()
+                    }, 1500L) // 1.5s backoff gives TalkBack time to finish reading its UI event
+                }
+            }
+
             @Deprecated("Deprecated in Java")
             override fun onError(p0: String?) {
                 this.onError(p0 ?: "unknown", 0);
             }
 
             override fun onError(utteranceId: String, errorCode: Int) {
-                Log.e(TAG, "TTS Error on chunk $chunkIndex: $errorCode")
-                isCancelled = true
-                cleanup()
-                onError(context.getString(R.string.error_tts_exception, "Error code $errorCode"))
+                handleErrorOrInterruption(utteranceId, errorCode)
             }
         })
     }
