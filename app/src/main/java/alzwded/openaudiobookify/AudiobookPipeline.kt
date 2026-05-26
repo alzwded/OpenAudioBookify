@@ -307,17 +307,18 @@ class AudiobookPipeline(
                 
                 // Talkback (or another app) flushed the TTS queue. 
                 // We need to retry the *current* chunk (don't increment chunkIndex yet).
-                if (interrupted) {
-                    Handler(context.mainLooper).postDelayed({
-                        if (isCancelled) return@postDelayed 
-                        Log.i(TAG, "Retrying TTS utterance for $utteranceId after interruption")
-                        // Nuke the partially written file to ensure a clean header on retry
+                Handler(context.mainLooper).postDelayed({
+                    if (isCancelled) return@postDelayed 
+                    Log.i(TAG, "Retrying TTS utterance for $utteranceId after interruption")
+                    // Nuke the partially written file to ensure a clean header on retry
+                    if (interrupted) {
+                        // interrupted==false means the utterance was never started, so there should be no file.
                         val wavFile = getWavFile(chunkIndex)
                         if (wavFile.exists()) wavFile.delete()
-                        // retry
-                        synthesizeCurrentChunk()
-                    }, 1500L) // 1.5s backoff gives TalkBack time to finish reading its UI event
-                }
+                    }
+                    // retry
+                    synthesizeCurrentChunk()
+                }, 1500L) // 1.5s backoff gives TalkBack time to finish reading its UI event
             }
 
             @Deprecated("Deprecated in Java")
