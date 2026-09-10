@@ -179,9 +179,14 @@ class AudiobookPipeline(
     }
 
     // Transformer for encoding WAV -> M4A
-    private val chunkTransformer: Transformer by lazy {
-        createAudioTransformer(object : Transformer.Listener {
+    private var activeTransformer: Transformer? = null
+
+    private fun createChunkTransformer(): Transformer {
+        return createAudioTransformer(object : Transformer.Listener {
             override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                // null out to hopefully releases resources asap
+                activeTransformer = null
+
                 Log.i(TAG, "Completed $chunkIndex")
                 if (isCancelled) return
 
@@ -201,6 +206,7 @@ class AudiobookPipeline(
                 exportResult: ExportResult,
                 exportException: ExportException
             ) {
+                activeTransformer = null
                 Log.e(TAG, "Chunk MediaCodec Error on chunk $chunkIndex: ${exportException.message}")
                 cleanup()
                 onError(context.getString(R.string.error_mediacodec, chunkIndex))
@@ -218,7 +224,7 @@ class AudiobookPipeline(
         Log.i(TAG, "Canceling pipeline")
         isCancelled = true
         tts.stop()
-        chunkTransformer.cancel()
+        activeTransformer?.cancel()
         cleanup()
     }
 
@@ -339,7 +345,8 @@ class AudiobookPipeline(
         if (m4aFile.exists()) m4aFile.delete()
 
         val mediaItem = MediaItem.fromUri(Uri.fromFile(wavFile))
-        chunkTransformer.start(mediaItem, m4aFile.absolutePath)
+        activeTransformer = createChunkTransformer()
+        activeTransformer?.start(mediaItem, m4aFile.absolutePath)
     }
 
     private fun mergeChunksAndExport() {
@@ -367,8 +374,10 @@ class AudiobookPipeline(
 
         onProgress(BookStatus.MERGING, 95);
 
-        val mergeTransformer = createPassthroughTransformer(object : Transformer.Listener {
+        activeTransformer = createPassthroughTransformer(object : Transformer.Listener {
             override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                activeTransformer = null
+
                 Log.i(TAG, "Final m4a completed")
                 if (!isCancelled) {
                     if (writeToOutputDir(finalTempFile)) {
@@ -388,6 +397,7 @@ class AudiobookPipeline(
                 exportResult: ExportResult,
                 exportException: ExportException
             ) {
+                activeTransformer = null
                 Log.e(TAG, "Error merging final audiobook: ${exportException.message}")
                 cleanup(finalTempFile)
                 onError(context.getString(R.string.error_merging))
@@ -396,7 +406,7 @@ class AudiobookPipeline(
 
         Handler(context.mainLooper).post {
             if (!isCancelled) {
-                mergeTransformer.start(composition, finalTempFile.absolutePath)
+                activeTransformer?.start(composition, finalTempFile.absolutePath)
             }
         }
     }
