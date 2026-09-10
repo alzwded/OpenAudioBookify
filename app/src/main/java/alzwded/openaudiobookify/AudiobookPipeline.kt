@@ -146,7 +146,6 @@ class AudiobookPipeline(
             ): Codec {
                 val customFormat = format.buildUpon()
                     .setChannelCount(1)
-                    .setSampleRate(44100)
                     .setAverageBitrate(targetBitrate)
                     .build()
                 return defaultEncoderFactory.createForAudioEncoding(customFormat, logSessionId)
