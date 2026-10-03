@@ -1,3 +1,9 @@
+17.0
+====
+
+Add button on About activity to dump app logs. These are just the app's logs,
+and they help a bunch in debugging issues.
+
 16.0
 ====
 

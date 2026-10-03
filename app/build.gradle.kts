@@ -11,8 +11,8 @@ android {
         applicationId = "alzwded.openaudiobookify"
         minSdk = 24
         targetSdk = 37
-        versionCode = 16
-        versionName = "16.0"
+        versionCode = 17
+        versionName = "17.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
