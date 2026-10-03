@@ -217,6 +217,12 @@ private fun exportLogs(context: Context): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             writeLogsToMediaStore(context, process, fileName)
         } else {
+            // Note to self: the MediaStore prior to Android 10/sdk 29
+            // could only deal with audio/video; saving to Downloads
+            // by way of MediaStore only became a thing later. This is
+            // why AudiobookPipeline just blindly goes down the MediaStore
+            // path, saving audio by way of it was possible since the
+            // Dawn Of Time (API level 1)
             writeLogsToExternalStorage(context, process, fileName)
         }
         val exitCode = process.waitFor()
