@@ -1,0 +1,5 @@
+OpenAudioBookify is an open source Android app which allows you to select one or more plaintext, markdown, HTML or EPUB documents and generate an M4A audio file of the machine spoken ebook, which you can then load into your favourite podcast player.
+
+OpenAudioBookify uses one of the system Text-to-Speech engines available on the device with whatever voices are available to that engine. The app likewise uses the system's audio encoding capabilities to produce the final audiobook. And it relies on the Storage Access Framework for input and output.
+
+OpenAudioBookify itself does not depend on any cloud, online, or otherwise any form of subscription service -- it does all it does locally.

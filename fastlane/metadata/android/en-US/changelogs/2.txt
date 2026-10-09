@@ -1,0 +1,1 @@
+Fix theme to actually pick up on accent colour.

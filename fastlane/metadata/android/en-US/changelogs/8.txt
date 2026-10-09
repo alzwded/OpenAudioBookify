@@ -1,0 +1,1 @@
+- Added Romanian language translation, more translations welcome
