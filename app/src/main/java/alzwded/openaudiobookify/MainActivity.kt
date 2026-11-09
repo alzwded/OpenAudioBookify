@@ -45,6 +45,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -303,7 +304,7 @@ fun OpenAudioBookifyApp(viewModel: MainViewModel) {
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
             hasWriteExternalPermission = ContextCompat.checkSelfPermission(
-                context, 
+                context,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE
             ) == PackageManager.PERMISSION_GRANTED
         }
@@ -540,7 +541,10 @@ fun OpenAudioBookifyContent(
                         ) {
                             Text(
                                 text = book.name,
-                                modifier = Modifier.weight(1f).padding(end = 8.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(end = 8.dp)
+                                    .basicMarquee(),
                                 maxLines = 1
                             )
                             when (book.status) {
@@ -565,7 +569,10 @@ fun OpenAudioBookifyContent(
                         ) {
                             Text(
                                 text = book.name,
-                                modifier = Modifier.weight(1f).padding(end = 8.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(end = 8.dp)
+                                    .basicMarquee(),
                                 maxLines = 1
                             )
                             IconButton(

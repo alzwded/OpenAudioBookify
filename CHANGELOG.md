@@ -1,3 +1,8 @@
+18.0
+====
+
+Add marquee modifier to book queue entries.
+
 17.0
 ====
 
