@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlinCompose)
 }
 
+val hasKeystore = !System.getenv("RELEASE_STORE_FILE").isNullOrEmpty()
+
 android {
     namespace = "alzwded.openaudiobookify"
     compileSdk = 37
@@ -21,11 +23,13 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            storeFile = file(System.getenv("RELEASE_STORE_FILE") ?: "/dev/null")
-            storePassword = System.getenv("RELEASE_STORE_PASSWORD")
-            keyAlias = System.getenv("RELEASE_KEY_ALIAS")
-            keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+        if (hasKeystore) {
+            create("release") {
+                storeFile = file(System.getenv("RELEASE_STORE_FILE") ?: "/dev/null")
+                storePassword = System.getenv("RELEASE_STORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+            }
         }
     }
 
@@ -39,7 +43,10 @@ android {
                 "proguard-rules.pro"
             )
 
-            signingConfig = signingConfigs.getByName("release")
+            // don't sign by default assembleRelease
+            if (hasKeystore) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
 
         getByName("debug") {
@@ -48,6 +55,7 @@ android {
             manifestPlaceholders["appName"] = "OpenAudioBookify (Debug)"
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -63,8 +71,10 @@ android {
 }
 
 kotlin {
+    jvmToolchain(11)
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+        freeCompilerArgs.add("-Xnormalize-absolute-paths")
     }
 }
 
