@@ -1,3 +1,10 @@
+19.0
+====
+
+No functional changes.
+
+Remove foojay-resolver and jvmToolchain for F-Droid.
+
 18.0
 ====
 

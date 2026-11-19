@@ -13,8 +13,8 @@ android {
         applicationId = "alzwded.openaudiobookify"
         minSdk = 24
         targetSdk = 37
-        versionCode = 18
-        versionName = "18.0"
+        versionCode = 19
+        versionName = "19.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -71,10 +71,11 @@ android {
 }
 
 kotlin {
-    jvmToolchain(11)
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+        // Ensure deterministic Kotlin metadata generation
         freeCompilerArgs.add("-Xnormalize-absolute-paths")
+        freeCompilerArgs.add("-Xno-param-assertions")
     }
 }
 
