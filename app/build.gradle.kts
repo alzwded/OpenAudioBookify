@@ -13,8 +13,8 @@ android {
         applicationId = "alzwded.openaudiobookify"
         minSdk = 24
         targetSdk = 37
-        versionCode = 19
-        versionName = "19.0"
+        versionCode = 20
+        versionName = "20.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -31,6 +31,11 @@ android {
                 keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
             }
         }
+    }
+
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
     }
 
     buildTypes {

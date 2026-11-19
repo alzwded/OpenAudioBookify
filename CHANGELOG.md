@@ -1,3 +1,10 @@
+20.0
+====
+
+No functional changes.
+
+Exclude dependenciesInfo for F-Droid.
+
 19.0
 ====
 
