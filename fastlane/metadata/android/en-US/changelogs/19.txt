@@ -1,0 +1,3 @@
+No functional changes.
+
+Remove foojay-resolver and jvmToolchain for F-Droid.

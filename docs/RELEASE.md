@@ -2,6 +2,7 @@ Release
 =======
 
 - `CHANGELOG.md` up to date, newest first
+- add entry to `fastlane/metadata/android/en-US/changelogs/`
 - `app/build.gradle.kts`
   + `versionCode++`
   + `versionName`.major++
