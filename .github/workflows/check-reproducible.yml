@@ -1,0 +1,56 @@
+name: Reproducible builds
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag to verify (leave blank when running directly on a tag ref)'
+        required: false
+        type: string
+
+jobs:
+  verify-reproducible-builds:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.tag_name || github.ref }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Set env
+        run: |
+          TAG="${{ inputs.tag_name || github.event.release.tag_name || github.ref_name }}"
+          echo "VERSION_NAME=${TAG}" >> $GITHUB_ENV
+          echo "RELEASE_APK_NAME=app-release.apk" >> $GITHUB_ENV
+
+      - name: Download signed apk
+        run: |
+          gh release download "${{ env.VERSION_NAME }}" -p "${{ env.RELEASE_APK_NAME }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install required packages
+        run: |
+          sudo apt update -y
+          sudo apt install -y rsync apksigner apksigcopier
+
+      - name: Build App
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease
+
+      - name: Verify Reproducible builds
+        run: |
+          cp app/build/outputs/apk/release/app-release-unsigned.apk new-build.apk
+          apksigcopier compare --unsigned ${{ env.RELEASE_APK_NAME }} new-build.apk
