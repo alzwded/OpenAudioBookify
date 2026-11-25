@@ -13,8 +13,8 @@ android {
         applicationId = "alzwded.openaudiobookify"
         minSdk = 24
         targetSdk = 37
-        versionCode = 21
-        versionName = "21.0"
+        versionCode = 22
+        versionName = "22.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -42,11 +42,9 @@ android {
         release {
             manifestPlaceholders["appName"] = "OpenAudioBookify"
 
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            optimization {
+                enable = true
+            }
 
             // don't sign by default assembleRelease
             if (hasKeystore) {
