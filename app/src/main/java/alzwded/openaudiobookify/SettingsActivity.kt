@@ -44,7 +44,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
@@ -264,13 +263,10 @@ fun SettingsScreenContent(
 ) {
     var showEngineSelection by remember { mutableStateOf(false) }
     var showVoiceSelection by remember { mutableStateOf(false) }
-    val view = LocalView.current
-    val readyAnnounce = stringResource(R.string.tts_ready_announce)
-
-    LaunchedEffect(isTtsReady) {
-        if (isTtsReady) {
-            view.announceForAccessibility(readyAnnounce)
-        }
+    val loadingStatus = if (isTtsReady) {
+        stringResource(R.string.tts_ready_announce)
+    } else {
+        stringResource(R.string.initializing_tts)
     }
 
     Column(
@@ -279,14 +275,18 @@ fun SettingsScreenContent(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
+        Box(
+            modifier = Modifier.semantics {
+                liveRegion = LiveRegionMode.Polite
+                contentDescription = loadingStatus
+            }
+        )
+
         if (!isTtsReady) {
             CircularProgressIndicator(modifier = Modifier.padding(bottom = 16.dp))
             Text(
                 text = stringResource(R.string.initializing_tts),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.semantics {
-                    liveRegion = LiveRegionMode.Polite
-                }
+                style = MaterialTheme.typography.bodyMedium
             )
             Spacer(modifier = Modifier.height(16.dp))
         } else if (engines.isEmpty()) {

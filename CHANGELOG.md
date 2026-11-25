@@ -1,3 +1,10 @@
+22.0
+====
+
+Activate R8 optimizations.
+
+A11Y: Replace deprecated (and impolite) announceForAccessibility with just live regions.
+
 21.0
 ====
 
