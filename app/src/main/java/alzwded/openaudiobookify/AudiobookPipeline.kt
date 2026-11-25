@@ -297,7 +297,7 @@ class AudiobookPipeline(
                     Log.e(TAG, "TTS Error on chunk $chunkIndex: $errorCode")
                     isCancelled = true
                     cleanup()
-                    onError(context.getString(R.string.error_tts_exception, "Error code $errorCode"))
+                    this@AudiobookPipeline.onError(context.getString(R.string.error_tts_exception, "Error code $errorCode"))
                 }
             }
 

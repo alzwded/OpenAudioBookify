@@ -5,6 +5,8 @@ Activate R8 optimizations.
 
 A11Y: Replace deprecated (and impolite) announceForAccessibility with just live regions.
 
+A11Y: Fix a potential infinite loop on TTS errors.
+
 21.0
 ====
 
