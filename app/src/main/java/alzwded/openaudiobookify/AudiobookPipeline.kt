@@ -317,7 +317,20 @@ class AudiobookPipeline(
                         if (wavFile.exists()) wavFile.delete()
                     }
                     // retry
-                    synthesizeCurrentChunk()
+                    try {
+                        val result = synthesizeCurrentChunk()
+                        if (result == TextToSpeech.ERROR) {
+                            Log.e(TAG, "TTS Error: synthesizeToFile returned ERROR on retry for chunk $chunkIndex")
+                            isCancelled = true
+                            cleanup()
+                            this@AudiobookPipeline.onError(context.getString(R.string.error_tts_failed))
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Exception during TTS synthesizeToFile on retry", e)
+                        isCancelled = true
+                        cleanup()
+                        this@AudiobookPipeline.onError(context.getString(R.string.error_tts_exception, e.localizedMessage ?: "Unknown error"))
+                    }
                 }, 1500L) // 1.5s backoff gives TalkBack time to finish reading its UI event
             }
 
