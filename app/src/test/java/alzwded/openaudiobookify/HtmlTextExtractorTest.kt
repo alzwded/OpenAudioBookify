@@ -30,10 +30,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.mock
-import org.mockito.Mockito.`when`
 
 class HtmlExtractorTest {
 
@@ -41,20 +38,7 @@ class HtmlExtractorTest {
 
     @Before
     fun setup() {
-        // Mock the Android Context to return the exact strings your tests expect.
-        // This avoids needing Robolectric for a pure JVM unit test.
         context = mock(Context::class.java)
-
-        `when`(context.getString(eq(R.string.tts_heading), any())).thenAnswer { 
-            it.getArgument<String>(1) // Pass heading text through as-is
-        }
-        `when`(context.getString(eq(R.string.tts_image_description), any())).thenAnswer { 
-            "Image description: " + it.getArgument<String>(1) 
-        }
-        `when`(context.getString(eq(R.string.tts_image_title), any())).thenAnswer { 
-            "Image title: " + it.getArgument<String>(1) 
-        }
-        `when`(context.getString(eq(R.string.tts_image_no_description))).thenReturn("Image")
     }
 
     @Test
@@ -81,7 +65,7 @@ class HtmlExtractorTest {
         val texts = results.map { it.text } // Unwrap the TextChunk
 
         val expected = listOf(
-            "The Beginning",
+            "§ The Beginning",
             "This is the first paragraph.",
             "It has two sentences.",
             "Row 1, Col 1",
@@ -108,10 +92,28 @@ class HtmlExtractorTest {
         val html = """<p>Look at this: <img src="dog.jpg" alt="A cute golden retriever"> Cool, right?</p>"""
         val results = extractHtmlTextLazily(context, html).toList()
         
-        // Actual output has double spaces around the brackets due to " [Alt] " being yielded
-        // into a buffer that might already have a space.
-        val expected = "Look at this:  [Image description: A cute golden retriever]  Cool, right?"
+        val expected = "Look at this:  [🖼 A cute golden retriever]  Cool, right?"
         
+        assertEquals(expected, results.first().text)
+    }
+
+    @Test
+    fun testImageTitleFallback() {
+        val html = """<p>Look at this: <img src="dog.jpg" title="A cute golden retriever"> Cool, right?</p>"""
+        val results = extractHtmlTextLazily(context, html).toList()
+
+        val expected = "Look at this:  [🖼 A cute golden retriever]  Cool, right?"
+
+        assertEquals(expected, results.first().text)
+    }
+
+    @Test
+    fun testImageNoDescription() {
+        val html = """<p>Look at this: <img src="dog.jpg"> Cool, right?</p>"""
+        val results = extractHtmlTextLazily(context, html).toList()
+
+        val expected = "Look at this:  [🖼 ☐]  Cool, right?"
+
         assertEquals(expected, results.first().text)
     }
 

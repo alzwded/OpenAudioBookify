@@ -252,10 +252,7 @@ class MarkdownBookTextProvider(
             val countingStream = CountingInputStream(inputStream, totalBytes)
 
             InputStreamReader(countingStream).buffered().use { reader ->
-                var inList = false
-                var listItemCount = 0
                 var inTable = false
-                var tableRowCount = 0
                 val paragraphBuffer = StringBuilder()
 
                 suspend fun SequenceScope<TextChunk>.flushParagraph() {
@@ -300,8 +297,7 @@ class MarkdownBookTextProvider(
                         if (!inTable) {
                             flushParagraph()
                             inTable = true
-                            tableRowCount = 1
-                            yield(TextChunk(context.getString(R.string.tts_table), countingStream.progress))
+                            yield(TextChunk("🔢", countingStream.progress))
                         }
                         // Skip the markdown table structure separator line (e.g. |---|---|)
                         if (cleanLine.matches(Regex("^\\|[\\s\\-:]+\\|.*"))) {
@@ -312,11 +308,9 @@ class MarkdownBookTextProvider(
                             cleanMarkdownFormatting(it.trim()) 
                         }
                         // Columns are separated by two new lines to force TTS to pause
-                        val rowText = context.getString(R.string.tts_table_row, tableRowCount) + "\n\n" + columns.joinToString("\n\n")
+                        val rowText = "• " + columns.joinToString("\n\n")
                         yield(TextChunk(rowText, countingStream.progress))
-                        tableRowCount++
                         
-                        inList = false
                         continue
                     } else if (inTable) {
                         inTable = false
@@ -326,9 +320,8 @@ class MarkdownBookTextProvider(
                     val headingMatch = Regex("^#{1,6}\\s+(.*)").find(cleanLine)
                     if (headingMatch != null) {
                         flushParagraph()
-                        inList = false
                         val headingText = cleanMarkdownFormatting(headingMatch.groupValues[1])
-                        yield(TextChunk(context.getString(R.string.tts_heading, headingText), countingStream.progress))
+                        yield(TextChunk("§ $headingText", countingStream.progress))
                         continue
                     }
 
@@ -336,30 +329,19 @@ class MarkdownBookTextProvider(
                     val listMatch = Regex("^([*\\-+]|\\d+\\.)\\s+(.*)").find(cleanLine)
                     if (listMatch != null) {
                         flushParagraph()
-                        inTable = false
-                        if (!inList) {
-                            inList = true
-                            listItemCount = 1
-                            yield(TextChunk(context.getString(R.string.tts_list), countingStream.progress))
-                        } else {
-                            listItemCount++
-                        }
-                        
+                        val introducer = listMatch.groupValues[1]
                         val itemText = cleanMarkdownFormatting(listMatch.groupValues[2])
-                        yield(TextChunk(context.getString(R.string.tts_list_item, listItemCount, itemText), countingStream.progress))
+                        yield(TextChunk("$introducer $itemText", countingStream.progress))
                         continue
                     }
 
                     // 4. Paragraph separation (empty line)
                     if (cleanLine.isEmpty()) {
-                        inList = false
                         flushParagraph()
                         continue
                     }
 
                     // 5. Normal text
-                    inList = false
-                    inTable = false
                     if (paragraphBuffer.isNotEmpty()) {
                         paragraphBuffer.append(" ")
                     }
@@ -375,14 +357,15 @@ class MarkdownBookTextProvider(
     private fun cleanMarkdownFormatting(text: String): String {
         var cleanText = text
         
-        // Images: ![alt](url) -> Image description: alt
+        // Images: ![alt](url) -> 🖼 alt or 🖼 ☐ if empty
         cleanText = cleanText.replace(Regex("!\\[(.*?)\\]\\((.*?)\\)")) {
-            context.getString(R.string.tts_image_description, it.groupValues[1])
+            val alt = it.groupValues[1].trim()
+            if (alt.isNotEmpty()) "🖼 $alt" else "🖼 ☐"
         }
         
         // Links: [text](url) -> text url
         cleanText = cleanText.replace(Regex("\\[(.*?)\\]\\((.*?)\\)")) {
-            "${it.groupValues[1]} ${it.groupValues[2]}"
+            "🔗 ${it.groupValues[1]} ${it.groupValues[2]}"
         }
         
         // Bold / Italic / Strikethrough / Inline Code

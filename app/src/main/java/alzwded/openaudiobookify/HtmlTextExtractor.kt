@@ -79,18 +79,17 @@ fun ballparkHtmlChunks(context: Context, htmlContent: String): Sequence<TextChun
                     tag == "img" || tag == "image" -> {
                         val alt = node.attr("alt").trim()
                         val title = node.attr("title").trim()
-                        if (alt.isNotEmpty()) {
-                            yield(TextChunk(" [" + context.getString(R.string.tts_image_description, alt) + "] ", currentProgress))
-                        } else if (title.isNotEmpty()) {
-                            yield(TextChunk(" [" + context.getString(R.string.tts_image_title, title) + "] ", currentProgress))
+                        val desc = if (alt.isNotEmpty()) alt else title
+                        if (desc.isNotEmpty()) {
+                            yield(TextChunk(" [🖼 $desc] ", currentProgress))
                         } else {
-                            yield(TextChunk(" [" + context.getString(R.string.tts_image_no_description) + "] ", currentProgress))
+                            yield(TextChunk(" [🖼 ☐] ", currentProgress))
                         }
                     }
                     // just grab flattened text from headings and drop a double
                     // line feed, as they probably don't have punctuation
                     tag.matches(Regex("h[1-6]")) -> {
-                        yield(TextChunk(context.getString(R.string.tts_heading, node.text()) + "\n\n", currentProgress))
+                        yield(TextChunk("§ " + node.text() + "\n\n", currentProgress))
                     }
                     // everything else:
                     else -> {

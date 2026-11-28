@@ -76,14 +76,6 @@
     <string name="error_merging">A apărut o eroare la pregătirea audiobook-ului final.</string>
     <string name="error_saf_write">Nu s-a putut scrie audiobook-ul final în dosarul selectat.</string>
 
-    <string name="tts_image_description">Imagine: %1$s</string>
-    <string name="tts_image_title">Imagine: %1$s</string>
-    <string name="tts_image_no_description">Imagine, nicio descriere disponibilă</string>
-    <string name="tts_heading">Titlu: %1$s</string>
-    <string name="tts_list">Listă:</string>
-    <string name="tts_list_item">Itemul %1$d: %2$s</string>
-    <string name="tts_table">Tabel:</string>
-    <string name="tts_table_row">Rândul %1$d:</string>
     <string name="error_missing_documentsui">Lipsește com.(google.)android.documentsui, nu se poate afișa fereastra de selecție a dosarului de ieșire. Continuați fără a specifica un dosar de ieșire, cărțile ar trebui să apară în /Audiobooks</string>
     <string name="reset_output_folder">Restabilește dosarul de ieșire implicit</string>
     <string name="dump_logs">Stochează jurnalul app-ului</string>

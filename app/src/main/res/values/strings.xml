@@ -98,14 +98,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."</string>
     <string name="error_merging">Error merging final audiobook.</string>
     <string name="error_saf_write">Failed to write the final audiobook to the selected folder.</string>
 
-    <string name="tts_image_description">Image description: %1$s</string>
-    <string name="tts_image_title">Image title: %1$s</string>
-    <string name="tts_image_no_description">Image, no description available</string>
-    <string name="tts_heading">Heading: %1$s</string>
-    <string name="tts_list">List:</string>
-    <string name="tts_list_item">List item %1$d: %2$s</string>
-    <string name="tts_table">Table:</string>
-    <string name="tts_table_row">Row %1$d:</string>
     <string name="error_missing_documentsui">Missing com.(google.)android.documentsui, cannot bring up file picker. Continue without setting a directory, the books should show up in /Audiobooks</string>
     <string name="reset_output_folder">Reset to default output directory</string>
     <string name="dump_logs">Dump app logs</string>

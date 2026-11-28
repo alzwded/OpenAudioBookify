@@ -1,3 +1,12 @@
+23.0
+====
+
+Reworked speech emitted from Markdown and HTML to use emojis instead of English text to announce tables/lists/images, since we only have two translations at this time.
+
+The Markdown parser no longer counts list items and table rows (it was buggy anyway, and it's annoying).
+
+Fixes https://github.com/alzwded/OpenAudioBookify/issues/12
+
 22.0
 ====
 
